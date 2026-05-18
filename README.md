@@ -15,7 +15,7 @@ The primary goal of this repository is to build an unshakable foundation for bui
 - [🚀 Getting Started \& Usage](#-getting-started--usage)
   - [1. Prerequisites](#1-prerequisites)
   - [2. Clone the Repository](#2-clone-the-repository)
-  - [Module Execution](#module-execution)
+  - [3. Module Execution](#module-execution)
 - [📖 Additional Resources](#-additional-resources)
 - [👤 Author](#-author)
 
@@ -136,6 +136,7 @@ To run these modules locally, you will need the following installed:
 - [npm](https://www.npmjs.com/) (v9.0.0 or higher)
 - [Redis](https://redis.io/) (Required for Module 03 queues)
 - [Visual Studio Code](https://code.visualstudio.com/) (Recommended IDE)
+- [Postman](https://code.visualstudio.com/) (Recommended API client)
 
 ### 2. Clone the Repository
 
@@ -147,11 +148,11 @@ git clone https://github.com/anandprakash01/learning-nodejs.git
 cd learning-nodejs
 ```
 
-### Module Execution
+### 3. Module Execution
 
-If you are using VS Code, you can open the project and run the files directly using any of the following options:
+**Step 1: Start the Server**
 
-**Integrated Terminal**
+If you are using VS Code, you can open the project and run these commands directly inside the integrated terminal (`Ctrl + \``).
 
 ```bash
 # Navigate to the specific module
@@ -160,12 +161,24 @@ cd 01_nodejs
 # Install dependencies
 npm install
 
-# Run in development mode (watch mode with nodemon)
+# Run in development mode (auto-restarts with nodemon)
 npm run dev
 
 # Or run production mode
 npm start
 ```
+
+---
+
+#### Step 2: Test the API Responses (Modules 2 & 3)
+
+Once your Express server or Distributed backend is running, you will need an API client to interact with the endpoints.
+
+1. Open **Postman** (or Insomnia / Thunder Client).
+2. Create a new HTTP request (`GET`, `POST`, `PUT`, `DELETE`).
+3. Enter the local server URL (e.g., `http://localhost:3000/api/v1/users`).
+4. Add any necessary JSON bodies or Auth headers in the request configuration.
+5. Hit **Send** to view the structured JSON response, inspect network headers, and test your error boundaries!
 
 ---
 
