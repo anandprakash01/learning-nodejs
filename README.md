@@ -6,15 +6,18 @@ The primary goal of this repository is to build an unshakable foundation for bui
 
 ## 📑 Table of Contents
 
-- [Tech Stack & Environment](#tech-stack--environment)
-- [The Architectural Journey](#the-architectural-journey)
-- [Curriculum & Directory Structure](#curriculum--directory-structure)
-  - [Module 01: Core Node.js Concepts](#module-01-core-nodejs-concepts)
-  - [Module 02: Express.js — Standard MVC](#module-02-expressjs--standard-mvc)
-  - [Module 03: Distributed-Nexus — Enterprise Architecture](#module-03-distributed-nexus--enterprise-architecture)
-- [Getting Started & Usage](#getting-started--usage)
-- [Additional Resources](#additional-resources)
-- [Author](#author)
+- [🛠️ Tech Stack \& Environment](#️-tech-stack--environment)
+- [🏗️ The Architectural Journey](#️-the-architectural-journey)
+- [📚 Curriculum \& Directory Structure](#-curriculum--directory-structure)
+  - [📦 Module 01: Core Node.js Concepts](#-module-01-core-nodejs-concepts)
+  - [🌐 Module 02: Express.js — Standard MVC](#-module-02-expressjs--standard-mvc)
+  - [⚡ Module 03: Distributed-Nexus — Enterprise Architecture](#-module-03-distributed-nexus--enterprise-architecture)
+- [🚀 Getting Started \& Usage](#-getting-started--usage)
+  - [1. Prerequisites](#1-prerequisites)
+  - [2. Clone the Repository](#2-clone-the-repository)
+  - [Module Execution](#module-execution)
+- [📖 Additional Resources](#-additional-resources)
+- [👤 Author](#-author)
 
 ---
 
