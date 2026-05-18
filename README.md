@@ -4,6 +4,20 @@ Welcome to my comprehensive Node.js learning repository. This project is a micro
 
 The primary goal of this repository is to build an unshakable foundation for building scalable, high-performance backend applications—from understanding foundational APIs to deploying production-ready distributed systems.
 
+## 📑 Table of Contents
+
+- [Tech Stack & Environment](#tech-stack--environment)
+- [The Architectural Journey](#the-architectural-journey)
+- [Curriculum & Directory Structure](#curriculum--directory-structure)
+  - [Module 01: Core Node.js Concepts](#module-01-core-nodejs-concepts)
+  - [Module 02: Express.js — Standard MVC](#module-02-expressjs--standard-mvc)
+  - [Module 03: Distributed-Nexus — Enterprise Architecture](#module-03-distributed-nexus--enterprise-architecture)
+- [Getting Started & Usage](#getting-started--usage)
+- [Additional Resources](#additional-resources)
+- [Author](#author)
+
+---
+
 ## 🛠️ Tech Stack & Environment
 
 - **Core Language:** JavaScript (ES6+)
