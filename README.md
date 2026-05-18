@@ -15,7 +15,7 @@ The primary goal of this repository is to build an unshakable foundation for bui
 - [🚀 Getting Started \& Usage](#-getting-started--usage)
   - [1. Prerequisites](#1-prerequisites)
   - [2. Clone the Repository](#2-clone-the-repository)
-  - [3. Module Execution](#module-execution)
+  - [3. Module Execution](#3-module-execution)
 - [📖 Additional Resources](#-additional-resources)
 - [👤 Author](#-author)
 
@@ -52,6 +52,7 @@ Learn the foundational Node.js APIs and understand how the asynchronous Event Lo
 - **`02_fs_module.js`** — File system operations (synchronous, callback, and promise-based I/O).
 - **`03_event_module.js`** — The `EventEmitter` class, custom events, and the Pub/Sub pattern.
 - **`04_http_module.js`** — Building raw HTTP servers, parsing streams, and sending responses without frameworks.
+
 </details>
 
 **🎯 Learning Goals:**  
@@ -150,9 +151,9 @@ cd learning-nodejs
 
 ### 3. Module Execution
 
-**Step 1: Start the Server**
+#### Step 1: Start the Server
 
-If you are using VS Code, you can open the project and run these commands directly inside the integrated terminal (`Ctrl + \``).
+If you are using VS Code, you can open the project and run these commands directly inside the integrated terminal ( Ctrl + ` ).
 
 ```bash
 # Navigate to the specific module
