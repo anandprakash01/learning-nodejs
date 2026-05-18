@@ -1,0 +1,14 @@
+The Physics of HTTP 204 No Content
+When you send res.status(204).json(...), the response object is completely empty, but 200 works perfectly.
+
+This is not a bug in code, and it is not a bug in Express. This is the Global Law of the Internet (RFC 7231).
+
+The Network Protocol:
+The HTTP status code 204 literally translates to "No Content".
+When the Node.js HTTP server sees that you set the status to 204, it acts as a strict bouncer. It says: "The protocol forbids me from sending a body with a 204 status." It physically intercepts your JSON object, deletes it from RAM, and sends exactly zero bytes across the TCP socket to the React frontend.
+
+The Enterprise Standard:
+
+The Strict REST Way: When you delete something, you return 204 and send absolutely nothing. The frontend knows that 204 means "Deletion Successful." It saves network bandwidth.
+
+The Pragmatic Way: If your React developers need a confirmation message (like "Review deleted successfully"), you cannot use 204. You must change it to 200 OK.

@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Distributed Nexus Test Client</title>
+  </head>
+  <body style="font-family: sans-serif; background: #121212; color: #fff; padding: 20px">
+    <h1>Distributed Nexus Diagnostic Control</h1>
+    <p>Status: <span id="status" style="color: red">Disconnected</span></p>
+    <p>
+      Connected to Worker PID:
+      <span id="worker-pid" style="color: #00ff00; font-weight: bold">None</span>
+    </p>
+
+    <button id="ping-btn" style="padding: 10px 20px; font-size: 16px; cursor: pointer">
+      Ping Distributed Cluster
+    </button>
+
+    <h2>Server Logs:</h2>
+    <ul
+      id="logs"
+      style="
+        background: #222;
+        padding: 15px;
+        border-radius: 5px;
+        list-style: none;
+        font-family: monospace;
+      "
+    ></ul>
+
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+    <script>
+      // 1. Establish the persistent connection to the Primary entry port
+      const socket = io("http://localhost:3000", {
+        transports: ["websocket"], // Force raw WebSocket TCP upgrade instantly
+      });
+
+      const statusEl = document.getElementById("status");
+      const workerEl = document.getElementById("worker-pid");
+      const logsEl = document.getElementById("logs");
+      const pingBtn = document.getElementById("ping-btn");
+
+      // 2. Capture the connection lifecycle event
+      socket.on("connect", () => {
+        statusEl.textContent = "Connected";
+        statusEl.style.color = "#00ff00";
+        log("Connection verified via WebSockets.");
+      });
+
+      // 3. Trigger a programmatic event to the backend cluster
+      pingBtn.addEventListener("click", () => {
+        log("Sending 'ping_server' event...");
+        socket.emit("ping_server", {timestamp: Date.now()});
+      });
+
+      // 4. Listen for the event returned by whichever Worker owns this connection
+      socket.on("pong_client", data => {
+        workerEl.textContent = data.handledBy;
+        log(`Received 'pong_client' response. Message: "${data.message}"`);
+      });
+
+      socket.on("disconnect", () => {
+        statusEl.textContent = "Disconnected";
+        statusEl.style.color = "red";
+        workerEl.textContent = "None";
+      });
+
+      function log(msg) {
+        const li = document.createElement("li");
+        li.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+        logsEl.appendChild(li);
+      }
+    </script>
+  </body>
+</html>

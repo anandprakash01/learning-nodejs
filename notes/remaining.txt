@@ -1,0 +1,12 @@
+3. The Uncharted Territory: Phase 2 (Distributed Systems)
+Phase 2 is a completely different beast. This is where you move from a single Node.js process to a multi-core, multi-server network. We haven't touched any of this yet:
+
+❌ docs/ (Swagger): We haven't written the OpenAPI documentation that allows frontend developers to read your API visually.
+
+❌ redis.js & Caching: Storing heavy database queries in Redis RAM so they load in 1 millisecond instead of 100 milliseconds.
+
+❌ tests/ (Jest & Supertest): Writing automated robots that test your API every time you save a file, ensuring you didn't break anything.
+
+❌ repositories/: Creating a wall between Mongoose and your App. If you ever wanted to switch from MongoDB to PostgreSQL, repositories make it possible.
+
+❌ queues/ & workers/ (BullMQ): If a user registers, sending an email takes 2 seconds. You don't want the user waiting 2 seconds for a response. You drop the task in a Redis Queue, return 200 OK instantly, and let a background Worker send the email silently.
