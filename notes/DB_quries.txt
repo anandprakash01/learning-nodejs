@@ -160,36 +160,3 @@ Update First => Directly update the document
 
 
 
-Security:
-Change the password into some differnt value(Encrypted).
-
-Encoding - Decoding : Conversion of text to make is usable for multiple systems (This is not for security) (2 way process)
-
-Encryption - Decryption :  Conversion of plain text into non understandable text (cipher text) with the help of a key "asdfl-=acsdfase-fawef#klfasjlkf" ( 2 way process)
-
-Hashing : Conversion of plain text into non understandable format with the help of a key (salt) (1 way process)
-
-
-Authentication : Verifying the ID of the user (username and password) -> Login
-
-JWT (JSON Web Token) : It is a token which stores information of the authenticated user.
-
-Autorization : Checking if the user has access to a particular resoure -> Access Denied
-
-
-12345
-1234
-asdfl
-zxcv
-Abcd@1234
-Hello@123
-
-Generating a JWT : 
-Pre requisits : 
-    1. User information
-    2. Expriry time
-    3. Secret key
-    4. Library to generate JWT
-
-
-

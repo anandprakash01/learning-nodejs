@@ -1,0 +1,170 @@
+
+Once you have defined the shape of your data using Types and Validators, you need to define its behavior.
+
+This is where Mongoose truly outshines native MongoDB. It allows you to attach logic directly to your schema so your data models are smart, self-contained, and reusable.
+
+=== Category 1: The Interceptors (Middleware / Hooks)
+
+Middleware (also called pre and post hooks) allows you to intercept processes in Mongoose. You can run code right before or right after a document is saved, updated, or deleted.
+
+Important Rule for Middleware: Always use standard function() syntax, never arrow functions () => {}. Mongoose needs to bind this to the document or query, and arrow functions break that binding.
+
+➖➖➖ 1. schema.pre(action, callback)
+
+=> What it does: Runs your logic before a specific action happens.
+=> When it runs: Before save, validate, remove, updateOne, find, etc.
+=> What it takes: The name of the action (String), and a callback function that receives a next parameter.
+=> What it modifies: Can modify the document (this) before it gets saved to the database.
+=> What it returns: Nothing. You must call next() to tell Mongoose to proceed to the next middleware or the actual save action.
+
+➖➖➖ 2. schema.post(action, callback)
+
+=> What it does: Runs your logic after a specific action has completed.
+=> When it runs: After the document is saved, found, or removed.
+=> What it takes: The action name (String), and a callback function that receives the finished document (doc) and next.
+=> What it modifies: Usually doesn't modify the document since it's already saved. Typically used for logging, triggering emails, or cleaning up related data.
+=> What it returns: Nothing. Call next().
+
+=== For the last 10 years, Mongoose used the next() function in its middlewares. It was a Callback Pattern. You had to manually press the next()
+However, mixing Callbacks (next) with Promises (async/await) causes massive memory tracking issues in the Node.js V8 engine. If an error happened, the stack trace would break, and developers couldn't see exactly which file caused the crash.
+
+The Mongoose 9 Revolution:
+To fix this, the creator of Mongoose completely rewrote the internal C++ middleware engine for Version 9.
+They explicitly deleted the next parameter from all async functions.
+
+=== Category 2: The Computed Properties (Virtuals)
+
+Virtuals are document properties that you can get and set, but they do not get saved to the MongoDB database.
+
+➖➖➖ 1. schema.virtual(propertyName) - check below "The ghost field" line 345
+
+=> What it does: Creates a "fake" field computed from actual fields.
+=> When it runs: Whenever you try to read (.get()) or write to (.set()) the virtual property name.
+=> What it takes: A string representing the name of the virtual field.
+=> What it returns: The computed value.
+
+const userSchema = new mongoose.Schema({
+  firstName: String,
+  lastName: String
+});
+
+➖ A GETTER Virtual
+userSchema.virtual('fullName').get(function() {
+  return `${this.firstName} ${this.lastName}`;
+});
+
+➖ A SETTER Virtual
+userSchema.virtual('fullName').set(function(name) {
+  const parts = name.split(' ');
+  this.firstName = parts[0];
+  this.lastName = parts[1];
+});
+
+➖ Usage:
+const user = new User({ firstName: 'John', lastName: 'Doe' });
+console.log(user.fullName); ➖ "John Doe" (runs the getter)
+
+user.fullName = "Jane Smith"; ➖ runs the setter
+➖ Now user.firstName is "Jane" and user.lastName is "Smith"
+
+Note: By default, Mongoose strips virtuals when you convert a document to JSON (like when sending an API response). To include them, you must add { toJSON: { virtuals: true } } to your Schema options.
+
+
+=== Category 3: The Custom Behaviors
+
+These methods allow you to add custom JavaScript functions to your documents, your models, or your database queries.
+
+➖➖➖ 1. Instance Methods: schema.methods
+
+=> What it does: Attaches a custom function to individual documents (instances).
+=> When it runs: When you explicitly call it on a fetched document.
+=> The this context: Refers to the specific document.
+
+userSchema.methods.comparePassword = async function(candidatePassword) {}
+
+➖ Usage (must fetch a user first)
+const user = await User.findOne({ email: 'test@test.com' });
+const isMatch = await user.comparePassword('mySecret123');
+
+➖➖➖ 2. Static Methods: schema.statics
+
+=> What it does: Attaches a custom function to the Model itself.
+=> When it runs: When you explicitly call it on the uppercase Model object.
+=> The this context: Refers to the Model (so you can run database queries inside it).
+
+➖ Definition
+userSchema.statics.findByEmail = function(email) {
+  ➖ 'this' refers to the User Model
+  return this.findOne({ email: email }); 
+};
+
+➖ Usage (called on the Model, no need to fetch a specific user first)
+const user = await User.findByEmail('test@test.com');
+
+
+➖➖➖ 3. Query Helpers: schema.query
+
+=> What it does: Allows you to create custom, chainable methods for your database queries.
+=> When it runs: When chained onto a query like .find() or .findOne().
+=> The this context: Refers to the current query object.
+
+➖ Definition
+userSchema.query.byName = function(name) {
+  ➖ 'this' is the query, so we chain a regex search to it
+  return this.where({ username: new RegExp(name, 'i') });
+};
+    ➖ where() is one of the most powerful and heavily used methods in Mongoose's Query API
+    ➖ where() is an alternative approach. It allows you to build queries using a chainable, readable syntax that reads almost like an English sentence.
+
+➖➖➖ Category: Query Method (belongs to mongoose.Query).
+
+=> What it does: Specifies which field (or fields) you want to apply search conditions to.
+=> What it returns: The Query object itself. Because it returns the query, you can immediately chain more commands onto it.
+
+You pass everything into a single object. If you have complex conditions (greater than, less than, etc.), you have to use MongoDB operator syntax (like $gte, $lt, $in).
+
+  ➖ Find admin users between age 18 and 65
+  User.find({
+    role: 'admin',
+    age: { $gte: 18, $lte: 65 }
+  });
+  Note: This works perfectly fine, but as queries get larger, nested objects can become hard to read.
+
+  Instead of a giant object, you declare the field using .where('fieldName'), and then chain helper methods onto it.
+
+  ➖ Find admin users between age 18 and 65
+  User.find()
+    .where('role').equals('admin')
+    .where('age').gte(18).lte(65);
+
+➖ Usage (Chainable!)
+const users = await User.find().byName('alice').limit(10);
+
+
+Once you declare .where('someField'), you unlock a bunch of chainable methods to test that specific field. Here are the most common ones:
+  .equals(value): The field must exactly match this value.
+  .gt(value) / .gte(value): Greater than / Greater than or equal  to.
+  .lt(value) / .lte(value): Less than / Less than or equal to.
+  .in([array]): The field value must be one of the items in this array.
+  .nin([array]): The field value must not be in this array (Not In).
+  .regex(regularExpression): The field must match this Regex pattern.
+  .exists(boolean): Checks if the field exists in the document at all.
+
+
+=== Category 4: Structural Methods (Schema Configuration)
+
+These are utility methods used to modify the schema structure itself after it has been created, or to bundle logic together.
+
+➖➖➖ 1. schema.add(obj)
+=> What it does: Adds new keys to the schema after it was initially defined.
+=> Useful for: Dynamically building schemas based on external configurations.
+
+➖➖➖ 2. schema.index(fields, options)
+=> What it does: Explicitly defines database indexes at the schema level rather than the field level.
+=> Useful for: Creating compound indexes (indexes that span multiple fields, like ensuring a userId and productId combination is unique).
+➖ Ensures a user can only have one review per specific product
+reviewSchema.index({ userId: 1, productId: 1 }, { unique: true });
+
+➖➖➖ 3. schema.plugin(pluginFunction, options)
+=> What it does: Allows you to package up any combination of the above (pre hooks, methods, virtuals) into a separate file and apply it to multiple schemas.
+=> Useful for: Reusability. For example, creating a timestampPlugin that adds createdAt and updatedAt to any schema it gets attached to.

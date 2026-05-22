@@ -1,4 +1,4 @@
-Yes, mixing async/await with the next() callback causes the exact same V8 stack trace corruption in Express.
+mixing async/await with the next() callback causes the exact same V8 stack trace corruption in Express.
 
 This is exactly why the transition from Express 4 to Express 5 took the Node.js community over 10 years to figure out. Let us look at how the two different systems (Mongoose and Express) chose to solve the exact same V8 memory problem.
 

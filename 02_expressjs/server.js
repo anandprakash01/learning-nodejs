@@ -89,3 +89,44 @@ process.on("unhandledRejection", err => {
 // Why server.close() is critical:
 // If your server has 500 users currently downloading data, and the process dies violently, all 500 users get a "Connection Severed" error on their screen.
 // By writing server.close(() => process.exit(1)), you tell Node.js: "Stop accepting NEW traffic. Wait for the current 500 users to finish downloading. Then, shut down safely." This is called a Graceful Shutdown, and it is a mandatory Enterprise standard.
+
+// if we want to safely shut down the server for a rejected promise, why wouldn't we do the exact same thing for a standard exception?
+
+// The short answer is: No, you absolutely should not use server.close() inside uncaughtException.
+
+// The reason comes down to how the V8 engine handles your computer's memory during these two different types of crashes.
+
+// Here is exactly why they must be handled differently.
+
+// 1. uncaughtException (The Hard Crash)
+// An uncaughtException happens when a synchronous piece of code throws an error that isn't wrapped in a try/catch block.
+
+// When this happens, the Node.js process enters what the official documentation calls an "unclean state."
+
+// The V8 engine's internal call stack just exploded.
+
+// Variables in your RAM might be half-written or corrupted.
+
+// The Node.js Event Loop can no longer be trusted to execute code predictably.
+
+// Why no server.close()?
+// server.close() is an asynchronous function. It tells the server, "Stop accepting new traffic, wait for all currently connected users to finish downloading their data, and then shut down."
+
+// Because your entire application's memory is currently corrupted, attempting to keep the server alive to finish serving those active users is incredibly dangerous. It can trigger infinite loops, memory leaks, or cause your server to start sending corrupted data to users.
+
+// When you hit an uncaughtException, you must pull the power plug immediately with a synchronous process.exit(1).
+
+// 2. unhandledRejection (The Graceful Shutdown)
+// An unhandledRejection happens when an asynchronous Promise fails, and you forgot to attach a .catch() block to it.
+
+// Unlike a synchronous exception, a rejected Promise happens in the background. The main V8 thread and your application's core memory are still perfectly intact and healthy. The Node.js Event Loop is still spinning normally; it just has an orphaned error floating around.
+
+// Why use server.close() here?
+// Because the core engine is still healthy, we have the luxury of performing a Graceful Shutdown. We can safely use server.close() to say: "Hey, a database query failed in the background. Let's stop accepting new users, let the current 50 users finish their API requests safely, and then restart the process."
+
+// 1. What is Round-Robin and How it Works
+// Round-Robin is the default load-balancing algorithm used by Node.js and almost every major cloud provider (like AWS and Nginx). It is the simplest, most equitable way to distribute traffic.
+
+// The Concept: Imagine a dealer handing out a deck of cards to 4 players. They deal one card to Player 1, the next to Player 2, then Player 3, then Player 4, and then they loop back to Player 1.
+
+// How it works in your API: When 100 API requests hit your server at the exact same time, the Operating System acts as the dealer. It blindly routes Request #1 to Worker 1, Request #2 to Worker 2, Request #3 to Worker 3, Request #4 to Worker 4, and Request #5 back to Worker 1.

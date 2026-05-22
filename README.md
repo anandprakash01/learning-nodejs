@@ -135,9 +135,9 @@ To run these modules locally, you will need the following installed:
 
 - [Node.js](https://nodejs.org/) (v18.0.0 or higher)
 - [npm](https://www.npmjs.com/) (v9.0.0 or higher)
-- [Redis](https://redis.io/) (Required for Module 03 queues)
+- [MongoDB](https://www.mongodb.com/try/download/community) (Community Server or an active Atlas Cloud connection string)
 - [Visual Studio Code](https://code.visualstudio.com/) (Recommended IDE)
-- [Postman](https://code.visualstudio.com/) (Recommended API client)
+- [Postman](https://www.postman.com/downloads/) (Highly recommended for testing API responses)
 
 ### 2. Clone the Repository
 

@@ -110,7 +110,7 @@ userSchema.pre("save", async function () {
 userSchema.methods.matchPassword = async function (enteredPass) {
   // bcrypt.compare takes the plain text password, reads the salt embedded inside the stored hash, and runs the meat grinder again to see if they match.
   return await bcrypt.compare(enteredPass, this.password);
-  // The bcrypt.compare function expects the unhashed plain text password first, and the hashed database password second.
+  // The bcrypt.compare function expects the un-hashed plain text password first, and the hashed database password second.
 };
 
 // => 2. Compile the Blueprint into an Executable Model

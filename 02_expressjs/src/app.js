@@ -86,6 +86,7 @@ app.use(helmet());
 // 2. Limit Requests from the same IP
 const limiter = rateLimit({
   max: 100, // Limit each IP to 100 requests...
+  limit: 100,
   windowMs: 60 * 60 * 1000, // ...per 1 hour (in milliseconds)
   message: "Too many requests from this IP, please try again in an hour!", // The 429 message
 });
