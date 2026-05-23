@@ -1,0 +1,75 @@
+# V8 Stack Trace Corruption: Express 5 vs Mongoose 9
+
+Mixing `async/await` with the `next()` callback causes the exact same V8 stack trace corruption in Express.
+
+This is exactly why the transition from Express 4 to Express 5 took the Node.js community over 10 years to figure out. Let us look at how the two different systems (Mongoose and Express) chose to solve the exact same V8 memory problem.
+
+---
+
+## The V8 Physics: Why Mixing Paradigms Destroys Stack Traces
+
+To understand why this is bad, you must understand how Node.js tracks errors.
+
+When code explodes, the V8 engine generates a Stack Trace (that giant wall of red text in your terminal). It builds this trace by looking at the "Call Stack" (a list of every function that was running at the exact moment of the explosion).
+
+- **The Promise Paradigm (`async`/`throw`):** If you use pure Promises, the V8 engine knows exactly how to freeze the Call Stack, wait for the background task, and keep the trace perfectly intact if it throws an error.
+- **The Callback Paradigm (`next`):** If you fire off an asynchronous task and pass it a callback like `next(err)`, you are stepping outside of the V8 Promise tracker.
+- **The Catastrophe:** If you write an `async` function, `await` a database call, and then manually call `next(err)`, the V8 engine gets confused. It says: "Wait, this was a Promise, but now you are using a callback to handle the error? I lost track of where we are." The resulting Stack Trace is garbled, and it points to internal Node.js core files instead of your actual controller.
+
+---
+
+## How Mongoose 9 Solved It
+
+As you just saw, Mongoose is a strict pipeline. You move from validation -> hashing -> saving.
+
+The creator of Mongoose decided the cleanest way to fix the V8 memory issue was to completely eradicate the callback paradigm. They literally deleted `next` from async middlewares. You are now forced to use pure V8 physics:
+
+- **To move forward:** `return` (resolves the Promise).
+- **To report an error:** `throw new Error()` (rejects the Promise).
+
+---
+
+## How Express 5 Solved It
+
+Express had a much harder problem. Express is a massive, multi-lane highway. You must have `next()` to tell Express to move from an Authentication Middleware, to a Logging Middleware, to the Final Controller. They could not delete it.
+
+So, Express 5 fixed it under the hood.
+
+In Express 5, you still use `next()` to move forward successfully. But if something goes wrong asynchronously, you no longer use `next(err)`. You use `throw`.
+
+Here is exactly how you write a custom async middleware in the modern Express 5 era:
+
+```javascript
+/* ===========================================================================
+🚨 CUSTOM EXPRESS 5 MIDDLEWARE (The Modern Standard)
+=========================================================================== */
+
+export const myCustomMiddleware = async (req, res, next) => {
+  // 1. We await an asynchronous background task
+  const isValid = await checkSomeExternalAPI();
+
+  // 2. THE ERROR STATE (Pure V8 Physics)
+  if (!isValid) {
+    // ❌ DO NOT write: next(new Error("Failed"));
+    // This mixes paradigms and ruins the stack trace.
+
+    // ✅ WRITE THIS:
+    throw new Error("External API Failed");
+    // Express 5 natively catches this rejected Promise and safely
+    // routes it to your Global Error Handler with a perfect stack trace!
+  }
+
+  // 3. THE SUCCESS STATE (The Pipeline Continues)
+  // We still use next() to tell Express to move to the next file.
+  next();
+};
+```
+
+---
+
+## The Architectural Summary
+
+You recognized a fundamental flaw in JavaScript memory management.
+
+- In **Mongoose 9**, you do not use `next` at all in async functions.
+- In **Express 5**, you use `next()` to move the pipeline forward, but you strictly use `throw` to handle async errors, keeping the V8 Promise chain perfectly intact.

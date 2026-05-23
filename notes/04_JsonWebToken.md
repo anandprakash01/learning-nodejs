@@ -1,0 +1,56 @@
+# JSON Web Token (JWT)
+
+HTTP is completely stateless, every single network request is treated as a brand new stranger.
+We must build a system to keep the user logged in without forcing them to send their password on every single click. We need to issue them a Cryptographic Passport.
+
+In the Enterprise backend world, this passport is called a JSON Web Token (JWT).
+
+---
+
+## The Physics of the JWT
+
+A JWT is a string of text that looks like three blocks of gibberish separated by dots: `xxxx.yyyy.zzzz`
+
+- **The Header (`xxxx`):** Tells the server what algorithm was used to sign it.
+- **The Payload (`yyyy`):** This is public RAM. We put safe data here, like the user's database `_id`. Never put passwords or credit cards here; anyone can decode this part.
+- **The Signature (`zzzz`):** This is the magic. The server takes the Header, the Payload, and a Secret Key (stored safely in your `.env` file), and mathematically mashes them together.
+
+**The Verification Physics:**
+When the user sends this passport back to us on their next request, our server rips off the signature, looks at the payload, and re-calculates the math using our `.env` Secret Key. If the math matches, the passport is authentic. If a hacker tries to change the payload (e.g., changing `user_id: 1` to `user_id: 2`), the math breaks, the signature is invalidated, and our server rejects them instantly.
+
+---
+
+## The Payload (Inside the Token): KEEP IT TINY
+
+The JWT is just Base64 encoded. Anyone can decode it. Never put PII (Personally Identifiable Information like email, phone, or name) inside the token. If a hacker intercepts the network traffic, they can read the user's data.
+
+**The Enterprise Standard:** Only put the `_id` and the `role` (so your frontend knows if they are an admin without checking the database).
+
+## The Login Response (The JSON sent to the frontend): MAKE IT RICH
+
+Yes! When the user logs in, the React frontend needs their name to say "Welcome, Anand!" and their email to show in the profile dropdown.
+Instead of just sending the token, we should send the token and the safe user data.
+
+---
+
+## The Network Boundary: Headers vs. Cookies
+
+Where should you send the token? This is the most debated security topic in backend engineering.
+
+**The Authorization:** `Bearer <token>` header is almost exclusively used for the client to send the token to the backend to access protected routes. When your backend is initially generating and issuing the token (e.g., right after a successful login), you generally do not send it back in the Authorization header.
+
+Instead, you have two primary choices for delivering that token.
+
+### Option A: Sending it in the JSON Body
+
+- **The Physics:** You send the token in the JSON body.
+- **Pros:** Incredibly flexible. The client has direct access to the token string and can store it securely in their device's keychain (on mobile) or memory and manually attaches it to every request Header.
+- **Cons:** If a web developer receives this JSON body, their only option is to store it in `localStorage` or `sessionStorage`. If the web app has any vulnerability that allows a malicious script to run, that script can easily read `localStorage` and steal the token. If a hacker injects malicious JavaScript into your website (Cross-Site Scripting), that script can easily read `localStorage` and steal the token.
+- **=> Best For:** Mobile Apps (iOS/Android) and public APIs where cookies don't exist.
+
+### Option B: The Cookie (`httpOnly`)
+
+- **The Physics:** Your Node.js server sends the token via a special `Set-Cookie` header. You flag the cookie as `httpOnly: true`.
+- **Pros:** The browser will physically block JavaScript from reading the cookie. An XSS hacker cannot steal it. Highly secure against Cross-Site Scripting (XSS). The browser will automatically attach this cookie to every subsequent request you make to the backend, so you don't even need to write frontend code to manage it.
+- **Cons:** You must implement basic CSRF (Cross-Site Request Forgery) protection, and it can be slightly harder to share this exact same auth route with a mobile app.
+- **=> Best For:** Web Applications (React/Vue). This is the strict Enterprise standard for web.
