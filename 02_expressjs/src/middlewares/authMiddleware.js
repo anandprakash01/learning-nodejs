@@ -1,6 +1,5 @@
 /*================================================================
-This middleware protects routes. It verifies the math of the JWT, 
-fetches the user from the database, and physically attaches the user object to the 'req' stream so the next controller knows exactly who is logged in.
+This middleware protects routes. It verifies the math of the JWT, fetches the user from the database, and physically attaches the user object to the 'req' stream so the next controller knows exactly who is logged in.
 ================================================================*/
 
 import jwt from "jsonwebtoken";
@@ -31,9 +30,14 @@ const protect = async (req, res, next) => {
     token = req.cookies.jwt; // Extract from Cookie
   }
 
+  // When the browser sends a request to your server, it packages all the cookies associated with your domain into a single giant string in the HTTP headers. Express (using the cookie-parser middleware) takes that string, parses it, and organizes all of them into a single plural object.
+
+  // When you want to send a cookie back to the browser, you don't send a massive batch object. You construct them one at a time, applying specific security rules (like httpOnly or sameSite) to each individual cookie.
+  // res.cookie('jwt', token, { httpOnly: true, secure: true }
+
   // => 2. If no token was found
   if (!token) {
-    throw new AppError("You are not logged in. Please log in to get access.", 401);
+    throw new AppError("You are not logged in. Please log in to get access.", 401); // unauthorized
   }
 
   // => 3. Verify the Math (The Cryptography Check)

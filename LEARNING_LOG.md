@@ -18,23 +18,29 @@ npm i --save-dev <package>   # Install as dev dependency (shorthand: npm i -D)
 ### The Critical Difference: Production vs Development Dependencies
 
 **The Mistake:**
+
 ```bash
 npm i nodemon  # ❌ Installs to production dependencies
 ```
+
 This tells the ecosystem that nodemon is required to run your business logic in production. When your DevOps pipeline builds a Docker container and runs `npm install`, it ships nodemon into production, which:
+
 - Bloats memory footprint (thousands of lines watching OS file systems)
 - Increases security surface area
 - Wastes CPU watching files that never change
 
 **The Enterprise Way:**
+
 ```bash
 npm i --save-dev nodemon  # ✅ Isolates to devDependencies
 ```
+
 This creates a strict environmental boundary. When production deployment runs `npm install --omit=dev`, Node.js explicitly ignores everything in devDependencies, keeping your V8 engine lean with only essential business logic.
 
 ### Why This Matters
 
 V8 Heap Management:
+
 - Production uses `--max-old-space-size=2048` to cap heap at 2GB
 - Predictable crashes are better than silent OOM lockups
 - Garbage Collector must keep up with network streams; bloated dependencies cause GC pressure
@@ -47,6 +53,7 @@ V8 Heap Management:
 
 Amateurs run: `node server.js`  
 This leaves the V8 engine without strict memory constraints, leading to:
+
 - Silent Out-Of-Memory (OOM) crashes when GC can't keep up
 - Version locking failures (libuv behavior changes across developer machines)
 - Unpredictable performance in production
@@ -54,15 +61,19 @@ This leaves the V8 engine without strict memory constraints, leading to:
 ### The Enterprise Solution
 
 1. **V8 Heap Boundaries**
+
    ```bash
    node --max-old-space-size=2048 server.js
    ```
+
    Strictly cap the V8 heap at 2GB. If it hits the limit, it crashes predictably rather than locking up the entire OS host.
 
 2. **Native Debugging**
+
    ```bash
    node --inspect server.js
    ```
+
    Allows VS Code debugger to attach directly to the libuv event loop for step-through memory analysis.
 
 3. **Engine Locking**
@@ -77,6 +88,7 @@ This leaves the V8 engine without strict memory constraints, leading to:
 **Used for:** Small to medium applications (thousands of users)
 
 **The Flow:**
+
 ```
 HTTP Request
     ↓
@@ -92,6 +104,7 @@ Response (blocks until complete)
 ```
 
 **Physics:** Everything is synchronous within the main V8 thread. When a user registers:
+
 1. Service hashes password
 2. Saves to MongoDB
 3. Sends welcome email
@@ -106,12 +119,14 @@ Response (blocks until complete)
 **Key Components:**
 
 #### 📁 Repositories/ (Database Boundary)
+
 - Abstracts data access from business logic
 - Standard MVC: Services talk directly to Mongoose
 - Advanced: Repository wraps all database interactions
 - **Benefit:** Switch MongoDB → PostgreSQL by rewriting only the Repository; Services never change
 
 #### 📁 Queues/ & 📁 Jobs/ (Background Workers)
+
 - Decouples HTTP response from side effects
 - When user registers:
   1. Controller validates input
@@ -122,6 +137,7 @@ Response (blocks until complete)
 - **Benefit:** Keeps V8 thread pool free; responsive to new requests
 
 #### 📁 Events/ (Internal Pub/Sub)
+
 - Different system parts communicate without importing each other
 - Replaces direct module imports with event-driven messaging
 - **Benefit:** Extreme decoupling; services can scale independently
@@ -135,12 +151,15 @@ Response (blocks until complete)
 ### VS Code Debugger Integration
 
 Attach debugger to running Node process:
+
 ```bash
 node --inspect server.js
 ```
+
 Then in VS Code: Run → "Attach to Node Process"
 
 This gives you:
+
 - Breakpoints
 - Step-through execution
 - Memory profiling

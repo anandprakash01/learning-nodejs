@@ -113,7 +113,7 @@ const appendFileAsync = async () => {
   const msg = `at ${new Date().toLocaleString()} user login activity\n`;
 
   try {
-    fSystem.appendFile(path, msg);
+    await fSystem.appendFile(path, msg);
     console.log("File updated successfully: ");
   } catch (err) {
     console.log("Unable to update file: ", error);
@@ -141,7 +141,7 @@ const readFile = () => {
   const readText = fs.readFile(path, (err, data) => {
     if (err) {
       //if fileName does not exist then it will give error
-      console.log("ERROR WHILE READING FILE: ", error);
+      console.log("ERROR WHILE READING FILE: ", err);
       return;
     }
     console.log("Buffer data: ", data); // this is buffer data
@@ -168,7 +168,7 @@ const readFileSync = () => {
     }
     console.log("File read successfully: ", data.toString()); //this is text data
   });
-  console.log(`File read successfully outside cb:\n${readText2.toString()}`); //this is text data, synchronous thats why it is giving data
+  console.log(`File read successfully outside cb:\n${readText2.toString()}`); // this is text data, synchronous thats why it is giving data
 };
 
 // ===== Promise API (Enterprise Standard)

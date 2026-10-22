@@ -6,10 +6,35 @@ const {StringDecoder} = require("string_decoder");
 // 1. Import the frozen, validated memory object
 const env = require("../config/env");
 
-// A TCP (Transmission Control Protocol) Server is fundamentally a long-running software process that binds itself to a specific physical hardware port (like Port 3000) on a machine and listens passively for incoming network connections from clients.
+/*
+TCP (Transmission Control Protocol) and UDP (User Datagram Protocol) are the two primary transport-layer protocols used to send data across the internet
 
-// Unlike a UDP connection, which just fires data blindly into the void, TCP is stateful, reliable, and stream-oriented.
-// When you start a TCP server, it asks the Operating System (Linux, Windows, macOS) to open a "Socket." A socket is simply an endpoint defined by an IP Address and a Port Number (e.g., 192.168.1.5:3000). Once bound, the OS routes all electrical signals arriving at that specific hardware port directly to your V8 Node.js process.
+TCP is a Transport Layer protocol. Its only job is to establish a reliable, error-checked connection between two devices and move raw data packets back and forth without losing them. It has no understanding of what the data actually means.
+
+TCP (Transmission Control Protocol)
+• Connection-Oriented: Requires a setup process called a three-way handshake (SYN, SYN-ACK, ACK) before data can be sent.
+• Reliable Delivery: Guarantees that all data packets arrive intact, in the correct order, and without duplicates by using sequence numbers and acknowledgments (ACKs).
+• Error Correction: Automatically retransmits lost or corrupted packets.
+• Higher Overhead: Slower than UDP because of extra control information (20 to 60-byte headers) and congestion control.
+• Common Use Cases: Web browsing (HTTP/HTTPS), email (SMTP/IMAP), file transfers (FTP), and online banking.
+
+UDP (User Datagram Protocol)
+
+• Connectionless: Sends data directly ("fire-and-forget") without establishing a prior connection or handshake.
+• Unreliable Delivery: Does not guarantee packet delivery, order, or recovery if a packet gets lost.
+• Low Overhead: Much faster and lighter because it uses a simple, fixed-size 8-byte header.
+• Broadcast and Multicast: Supports sending data to multiple recipients at once.
+• Common Use Cases: Real-time applications where speed matters more than a dropped frame, such as VoIP/video calls (Zoom, Google Meet), live streaming, online gaming, and DNS queries.
+
+
+HTTPS (Hypertext Transfer Protocol Secure) is an Application Layer protocol. It defines how web browsers and servers format, request, and display web pages. It provides the rules for encryption, security certificates (SSL/TLS), and web communication.
+
+Think of TCP as the secure armored truck and HTTPS as the locked vault inside it
+
+A TCP (Transmission Control Protocol) Server is fundamentally a long-running software process that binds itself to a specific physical hardware port (like Port 3000) on a machine and listens passively for incoming network connections from clients.
+
+When you start a TCP server, it asks the Operating System (Linux, Windows, macOS) to open a "Socket." A socket is simply an endpoint defined by an IP Address and a Port Number (e.g., 192.168.1.5:3000). Once bound, the OS routes all electrical signals arriving at that specific hardware port directly to your V8 Node.js process.
+*/
 
 // Sample JSON data
 const sampleData = [
@@ -26,7 +51,7 @@ const server = http.createServer((req, res) => {
 
   // The req (Request) Object: This represents the incoming data from the user. It contains the user's IP address, the URL they are trying to visit, and any data they are sending (like a login form).
 
-  // The res (Response) Object: This represents the outgoing pipeline back to the user. You use this to send data back.
+  // The res (Response) Object: This represents the outgoing pipeline back to the user. used to send the data back.
 
   // console.log(req);
   const currentUrl = req.url;

@@ -1,12 +1,22 @@
 # Cryptography: Encryption vs. Hashing
 
-### Encryption (Two-Way):
+## Encryption (Two-Way)
+
+Encryption is a two-way (reversible) mathematical process that scrambles readable data (plaintext) into an unreadable format (ciphertext) using a cryptographic key. Its primary purpose is confidentiality—ensuring that only authorized parties who possess the correct decryption key can read the original data.
+**_Example Use Case_**: Sending a credit card number over the internet, or storing medical records in a database.
+**_Standard Algorithms_**: AES-256, RSA.
 
 Encryption is a lockbox. You take the string "password123", lock it using a secret Key, and it becomes "xj9!2nL". If you have the Key, you can unlock it and get "password123" back.
 
 - **Rule:** Never encrypt passwords. If a hacker steals your database, they will also steal the server where the Key is stored, and unlock every password.
 
-### Hashing (One-Way):
+## Hashing (One-Way)
+
+Hashing is a one-way (irreversible) mathematical process that converts data of any size into a fixed-length string of characters (a hash or digest). Its primary purpose is integrity and verification—proving that data has not been altered, without actually revealing the data itself. A hash cannot be "decrypted" back into the original text.
+
+**_Example Use Case_**: Storing user passwords. The server hashes the password during signup. When the user logs in, the server hashes the entered password and compares the two hashes, never knowing the actual password.
+
+**_Standard Algorithms_**: bcrypt, Argon2, SHA-256.
 
 Hashing is a meat grinder. You throw "password123" into a complex mathematical algorithm, and it grinds it down into a 60-character scrambled string like `$2a$10$X8...`.
 
@@ -43,10 +53,10 @@ Instead, we attach it directly to the Blueprint (Schema). We use a Mongoose Docu
 
 This acts as a physical checkpoint:
 
-- ➡️ `User.create()` is called.
-- ➡️ Mongoose perfectly validates the data against the Schema.
-- ➡️ The `pre('save')` checkpoint activates. We pause the V8 engine, hash the password, and swap out the plain text for the hash.
-- ➡️ The database TCP socket fires.
+- `User.create()` is called.
+- Mongoose perfectly validates the data against the Schema.
+- The `pre('save')` checkpoint activates. We pause the V8 engine, hash the password, and swap out the plain text for the hash.
+- The database TCP socket fires.
 
 ---
 

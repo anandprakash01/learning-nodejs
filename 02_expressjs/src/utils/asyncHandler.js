@@ -54,3 +54,18 @@ const asyncHandler = fn => {
 // };
 
 export {asyncHandler};
+
+// Express 4.x does not catch errors in async functions because of a timeline issue: Express 4 was released in 2014, three years before async/await was added to JavaScript.
+
+// Because it was built in the era of callbacks, Express 4's internal routing engine simply doesn't know what a Promise is.
+
+// Here is exactly what happens under the hood:
+
+// How Express handles synchronous functions
+// When Express executes a normal, synchronous controller, it wraps it in an invisible try...catch block.
+// If you throw new AppError() synchronously, Express catches it and automatically passes it to next(err), sending it straight to your global error handler.
+
+// The async function problem
+// The moment you put the word async in front of a function, JavaScript fundamentally changes how that function behaves. An async function never actually "throws" an error out to the caller. Instead, it returns a Promise that is in a "rejected" state.
+
+// Because Express 4 was built before Promises were standard, it executes your controller but does not attach a .catch() to the end of it.

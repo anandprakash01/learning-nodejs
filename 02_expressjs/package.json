@@ -25,6 +25,7 @@
     "helmet": "^8.1.0",
     "jsonwebtoken": "^9.0.3",
     "mongoose": "^9.5.0",
+    "multer": "^2.4.0",
     "xss-clean": "^0.1.4",
     "zod": "^4.3.6"
   }

@@ -5,6 +5,24 @@
 import mongoose from "mongoose";
 import env from "./env.js";
 
+// Tells Mongoose to wrap user-provided objects so they are treated as literal strings,
+// completely neutralizing NoSQL injection operators like $gt or $ne.
+mongoose.set("sanitizeFilter", true);
+// sanitizeFilter is designed to prevent NoSQL injection attacks by blocking complex expression operators like $expr or $where in database queries
+// if this is no you get the error: "MongooseError: $expr is not allowed with sanitizeFilter
+// sanitizeFilter: false // Add this line to tell Mongoose this query is safe!
+// const event = await Event.findOneAndUpdate(
+//   {
+//     _id: req.params.id,
+//     $expr: { $lt: ["$ticketsSold", "$capacity"] } // Your intentional $expr
+//   },
+//   req.body,
+//   {
+//     new: true,
+//     sanitizeFilter: false
+//   }
+// );
+
 const connectDB = async () => {
   try {
     const conn = await mongoose.connect(env.MONGO_URI, {
@@ -42,6 +60,10 @@ mongoose.connection.on("disconnected", () => {
 
 mongoose.connection.on("reconnected", () => {
   console.log(`✅ [DATABASE] TCP connection restored at ${new Date().toLocaleString()}.`);
+});
+
+mongoose.connection.on("error", err => {
+  console.error("[DB ERROR] MongoDB connection encountered an error:", err.message);
 });
 
 export default connectDB;

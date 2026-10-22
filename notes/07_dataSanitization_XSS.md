@@ -61,7 +61,7 @@ It intercepts `req.body`, `req.query`, and `req.params`. It aggressively searche
 ### 2. `xss()` (`xss-clean`)
 
 - **The Threat:** Cross-Site Scripting (XSS)
-- **The Target:** Other Users' Browsers
+- **The Target:** Other User's Browsers
 
 The XSS Purifier (`xss-clean()`) Unlike the other packages, `xss-clean` has practically zero configuration options. You don't pass an object into it. It is a brute-force memory scrubber.
 

@@ -1,14 +1,21 @@
 /* ======================================
 physical limitation: Node.js is strictly single-threaded.
 
-If you rent a heavy server from AWS that has an 8-Core CPU and 32GB of RAM, and you type node server.js, Node.js will only use 1 Core. The other 7 Cores will sit completely idle, doing zero work.
+If you rent a heavy server from AWS that has an 8-Core CPU and 32GB of RAM, and you type "node server.js", Node.js will only use 1 Core. The other 7 Cores will sit completely idle, doing zero work.
 
 we must break out of that single thread. We are going to command Node.js to clone itself across every CPU core, and we are going to open a Persistent TCP Tunnel (WebSocket) so the server can talk to the React frontend without the frontend having to ask first.
 ====================================== */
 
+// --- Process Level Safety Nets ---
+// uncaughtException catches synchronous errors that occur anywhere in your application and are not wrapped inside a try...catch block.
+
+// If an error happens synchronously and nothing in your code is explicitly written to catch it, the error bubbles all the way up to the Node.js environment itself. That is when this safety net triggers.
+// eg. Reference Errors, Type Errors, Initialization Errors, Manual Throws
+
 import http from "http";
 // import {Server} from "socket.io"
 
+import "./src/utils/crashHandler.js"; // this must be at top
 import env from "./config/env.js";
 import connectDB from "./config/db.js";
 import app from "./src/app.js";
@@ -52,6 +59,35 @@ const server = http.createServer(app);
 
 // .catch() is a Promise chain, Node.js will execute connectDB(), realize it takes time, push it to the background, and immediately execute server.listen(3000). Your server will start accepting HTTP requests before the database finishes connecting. If a user hits your API in that split second, the app crashes.
 
+// 1. Attach the error listener BEFORE trying to listen
+server.on("error", error => {
+  // If it's not a port-binding error
+  if (error.syscall !== "listen") {
+    console.error("[SERVER ERROR] Non-listen error occurred:", error);
+    process.exit(1);
+  }
+
+  switch (error.code) {
+    case "EADDRINUSE":
+      console.error(`[SERVER ERROR] Port ${env.PORT} is already in use.`);
+      break;
+    case "EACCES":
+      console.error(
+        `[SERVER ERROR] Port ${env.PORT} requires elevated privileges (run as admin/root).`,
+      );
+      break;
+    default:
+      console.error("[SERVER ERROR] Unknown startup error:", error);
+  }
+  process.exit(1);
+});
+
+// syscall stands for "System Call". It is the underlying operation that Node.js requested from your operating system (Linux, Windows, macOS) when the error occurred.
+
+// When you run server.listen(PORT), Node.js talks to the operating system using a C++ system call literally named "listen" (and "bind") to ask for control of that network port.
+
+// Why we check it: The server.on("error") listener catches any error emitted by the HTTP server. By checking if (error.syscall !== "listen"), we are saying: "If this error did not happen during the OS port-binding phase, I don't know how to handle it here. Throw it so the uncaughtException handler can deal with it."
+
 const startServer = async () => {
   await connectDB();
 
@@ -67,19 +103,54 @@ startServer();
 // What happens if the database connection dies outside of a route? What if a background worker thread crashes? What if you use a third-party library that has a bug and throws an error before Express even touches the request?
 
 // --- Process Level Safety Nets ---
-process.on("uncaughtException", err => {
-  console.error("🚨 UNCAUGHT EXCEPTION! Shutting down...");
-  console.error(err.name, err.message);
-  process.exit(1);
-});
 
 process.on("unhandledRejection", err => {
   console.error("🚨 UNHANDLED REJECTION! Shutting down...");
-  console.error(err.name, err.message);
-  server.close(() => {
+  console.error(err.name, err.message, err.stack);
+
+  if (server.listening) {
+    server.close(() => {
+      process.exit(1);
+    });
+  } else {
     process.exit(1);
-  });
+  }
 });
+
+// 99% of the time unhandledRejection fires, your server will already be listening.
+// However, keeping if (server.listening) is a good safety guard for the remaining 1%
+
+const gracefulShutdown = signal => {
+  console.log(`\n[${signal}] signal received. Stopping HTTP server...`);
+
+  // 1. Stop accepting new requests
+  server.close(async () => {
+    console.log("HTTP server closed. All active requests finished.");
+
+    try {
+      // 2. Close database connections (Example using Mongoose)
+      // await mongoose.connection.close();
+      console.log("Database connections closed cleanly.");
+
+      // 3. Exit process cleanly
+      process.exit(0); // 0 indicates a successful, intended shutdown
+    } catch (err) {
+      console.error("Error during database disconnection:", err);
+      process.exit(1);
+    }
+  });
+
+  // Fallback: Force shutdown if connections hang for more than 10 seconds
+  setTimeout(() => {
+    console.error("[URGENT] Graceful shutdown timeout exceeded. Forcing exit.");
+    process.exit(1);
+  }, 10000).unref(); // unref() prevents the timeout from keeping the event loop alive
+};
+
+// SIGTERM is sent by Docker/Kubernetes/Heroku/PM2
+process.on("SIGTERM", () => gracefulShutdown("SIGTERM"));
+// SIGINT is sent by Ctrl+C in the terminal
+process.on("SIGINT", () => gracefulShutdown("SIGINT"));
 
 // Exit Status Code
 // This is how Node.js talks to your Operating System right before it dies.
@@ -105,9 +176,9 @@ process.on("unhandledRejection", err => {
 
 // The V8 engine's internal call stack just exploded.
 
-// Variables in your RAM might be half-written or corrupted.
+// Variables in your RAM might be half-written or corrupted, Memory might be leaking.
 
-// The Node.js Event Loop can no longer be trusted to execute code predictably.
+// The Node.js Event Loop can no longer be trusted to execute code predictably. continuing to run the application is a massive security and stability risk.
 
 // Why no server.close()?
 // server.close() is an asynchronous function. It tells the server, "Stop accepting new traffic, wait for all currently connected users to finish downloading their data, and then shut down."
@@ -123,6 +194,9 @@ process.on("unhandledRejection", err => {
 
 // Why use server.close() here?
 // Because the core engine is still healthy, we have the luxury of performing a Graceful Shutdown. We can safely use server.close() to say: "Hey, a database query failed in the background. Let's stop accepting new users, let the current 50 users finish their API requests safely, and then restart the process."
+
+// SIGTERM and SIGINT
+// When you deploy new code, scale down your servers, or restart a container, Docker/Kubernetes/PM2 does not just unplug the machine. They send a SIGTERM (terminate) signal. If your app ignores this, the host waits ~10 seconds and then forcefully executes a SIGKILL, which severs all active client downloads, aborts database writes, and causes data corruption.
 
 // 1. What is Round-Robin and How it Works
 // Round-Robin is the default load-balancing algorithm used by Node.js and almost every major cloud provider (like AWS and Nginx). It is the simplest, most equitable way to distribute traffic.

@@ -5,18 +5,19 @@ We must build a system to keep the user logged in without forcing them to send t
 
 In the Enterprise backend world, this passport is called a JSON Web Token (JWT).
 
----
-
 ## The Physics of the JWT
 
-A JWT is a string of text that looks like three blocks of gibberish separated by dots: `xxxx.yyyy.zzzz`
+`A JSON Web Token (JWT) is an open industry standard (RFC 7519) used to securely transmit information between two parties—typically a client like React and a server like Node.js—as a digitally signed JSON object. It stands for Json Web token.
+`
+
+A JWT is a string of text that looks like three blocks of meaningless text separated by dots: `xxxx.yyyy.zzzz`
 
 - **The Header (`xxxx`):** Tells the server what algorithm was used to sign it.
 - **The Payload (`yyyy`):** This is public RAM. We put safe data here, like the user's database `_id`. Never put passwords or credit cards here; anyone can decode this part.
 - **The Signature (`zzzz`):** This is the magic. The server takes the Header, the Payload, and a Secret Key (stored safely in your `.env` file), and mathematically mashes them together.
 
 **The Verification Physics:**
-When the user sends this passport back to us on their next request, our server rips off the signature, looks at the payload, and re-calculates the math using our `.env` Secret Key. If the math matches, the passport is authentic. If a hacker tries to change the payload (e.g., changing `user_id: 1` to `user_id: 2`), the math breaks, the signature is invalidated, and our server rejects them instantly.
+When the user sends this `JWT` back to us on their next request, our server rips off the signature, looks at the payload, and re-calculates the math using our `.env` Secret Key. If the math matches, the `JWT` is authentic. If a hacker tries to change the payload (e.g., changing `user_id: 1` to `user_id: 2`), the math breaks, the signature is invalidated, and our server rejects them instantly.
 
 ---
 
@@ -45,12 +46,12 @@ Instead, you have two primary choices for delivering that token.
 
 - **The Physics:** You send the token in the JSON body.
 - **Pros:** Incredibly flexible. The client has direct access to the token string and can store it securely in their device's keychain (on mobile) or memory and manually attaches it to every request Header.
-- **Cons:** If a web developer receives this JSON body, their only option is to store it in `localStorage` or `sessionStorage`. If the web app has any vulnerability that allows a malicious script to run, that script can easily read `localStorage` and steal the token. If a hacker injects malicious JavaScript into your website (Cross-Site Scripting), that script can easily read `localStorage` and steal the token.
+- **Cons:** If a web developer receives this JSON body, their only option is to store it in `localStorage` or `sessionStorage`. If the web app has any vulnerability that allows a malicious script to run, that script can easily read `localStorage` and steal the token. If a hacker injects malicious JavaScript into your website `Cross-Site Scripting (XSS)`, that script can easily read `localStorage` and steal the token.
 - **=> Best For:** Mobile Apps (iOS/Android) and public APIs where cookies don't exist.
 
 ### Option B: The Cookie (`httpOnly`)
 
 - **The Physics:** Your Node.js server sends the token via a special `Set-Cookie` header. You flag the cookie as `httpOnly: true`.
-- **Pros:** The browser will physically block JavaScript from reading the cookie. An XSS hacker cannot steal it. Highly secure against Cross-Site Scripting (XSS). The browser will automatically attach this cookie to every subsequent request you make to the backend, so you don't even need to write frontend code to manage it.
+- **Pros:** The browser will physically block JavaScript from reading the cookie. An `XSS` hacker cannot steal it. Highly secure against `Cross-Site Scripting (XSS)`. The browser will automatically attach this cookie to every subsequent request you make to the backend, so you don't even need to write frontend code to manage it.
 - **Cons:** You must implement basic CSRF (Cross-Site Request Forgery) protection, and it can be slightly harder to share this exact same auth route with a mobile app.
 - **=> Best For:** Web Applications (React/Vue). This is the strict Enterprise standard for web.

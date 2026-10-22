@@ -23,6 +23,7 @@ const router = express.Router();
 // If you were to open the actual C++ / Node.js source code of Express (specifically lib/router/index.js), you would see something that looks exactly like this:
 
 `// A simplified look inside the Express Source Code
+
 function Router(options) {
   // THE DEFENSE MECHANISM
   // It checks: "Did the developer forget to use the 'new' keyword?"
@@ -36,6 +37,7 @@ function Router(options) {
 
 const loginLimiter = rateLimit({
   max: 5, // Only 5 login attempts allowed
+  limit: 5, // renamed "max" to "limit" in newer versions
   windowMs: 30 * 60 * 1000, // ...per 30 min
   message: "Too many login attempts from this IP, please try again in 15 minutes.",
   skipSuccessfulRequests: true,

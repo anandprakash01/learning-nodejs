@@ -196,10 +196,8 @@ res.setHeader("X-Content-Type-Options", "nosniff");
 
 Helmet's entire job is to hide that ugly raw HTTP syntax from you. It gives you a clean, readable JavaScript object configuration.
 
+You just need to write helmet(). By default, calling helmet() automatically enables a core suite of security headers, and noSniff is already included in that default list. Passing { noSniff: true } is entirely redundant.
+
 ```javascript
-app.use(
-  helmet({
-    noSniff: true,
-  }),
-);
+app.use(helmet());
 ```

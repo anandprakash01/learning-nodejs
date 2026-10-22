@@ -27,6 +27,13 @@ const app = express();
 /* ========================================================
    1. THE BROWSER GATEWAY
 ======================================================== */
+
+// Setting app.set("trust proxy", 1) tells Express exactly how many reverse proxies (like Render, AWS, or Cloudflare) sit between your server and the actual user.
+// Added this line so Express trusts Render's proxy
+app.set("trust proxy", 1);
+// Express thinks the direct connection (Render's load balancer) is the user. Everyone shares the same IP, which breaks rate limiters.
+// With "trust proxy", 1: Express knows there is exactly 1 proxy in front of it. It reads the X-Forwarded-For header provided by Render and correctly assigns req.ip to the actual user's IP address.
+
 // Implement CORS.
 // In development, you can leave it empty to allow all.
 // In production, you strictly lock it to your frontend domain!
@@ -88,8 +95,12 @@ const limiter = rateLimit({
   max: 100, // Limit each IP to 100 requests...
   limit: 100,
   windowMs: 60 * 60 * 1000, // ...per 1 hour (in milliseconds)
+  standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
+  legacyHeaders: false, // Disable the deprecated `X-RateLimit-*` headers
   message: "Too many requests from this IP, please try again in an hour!", // The 429 message
 });
+// max - This was the original name for the property in older versions of the package (v5 and below)
+// limit - In newer versions of the package (v6 and v7+), the developers renamed the property to limit
 
 // We apply this limiter ONLY to routes that start with /api
 app.use("/api", limiter);
@@ -100,7 +111,8 @@ app.use("/api", limiter);
 // The Parser (express.json()): When the text hits your server, the Express JSON middleware intercepts it. It runs JSON.parse(), translates the text into a V8 JavaScript Object, and physically attaches it to req.body.
 // This reads the JSON body. We limit it to 10kb so hackers can't send huge files to crash RAM.
 app.use(express.json());
-app.use(express.json({limit: "10kb"}));
+app.use(express.json({limit: "10kb"})); // listens only for content-type : `application/json`
+// When a user uploads a file, the frontend must change the content type to multipart/form-data. When express.json() sees this, it says, "This isn't JSON," and completely ignores the request. The 10kb limit is bypassed.
 
 app.use(cookieParser()); // To read cookies from an incoming HTTP request, Express needs special parser.
 
@@ -186,15 +198,47 @@ app.get("/api/crash", async (req, res, next) => {
   });
 });
 
-// For the last 10 years, the creators of Express knew that the "Promise Blindness" was the biggest flaw in their framework. When they finally released Express 5.0, their number one priority was fixing it.
-// In Express 5, they re-wrote the internal C++ router to natively understand the async keyword. Now, if an asynchronous Promise rejects in the background, Express 5 automatically catches it and presses the next(error) trigger for you.
-// It is doing the exact same job as the asyncHandler, but it does it natively at the engine level. Adding your own asyncHandler on top of Express 5 is redundant and adds unnecessary V8 function calls.
-// the creators of Express secretly wrapped the execution of controller in a hidden try/catch block.
-// Because the code is synchronous, it explodes while Express was still watching. The internal Express try/catch immediately caught the TypeError or whatever, and Express automatically fires next(err) for you in the background. That is why it hits globalErrorHandler.
-
-// Synchronous Code (No Promises): Express can catch explosions automatically because they happen instantly.
-// Asynchronous Code (Promises/Databases): Express is blind (express 4.0). You MUST use asyncHandler to force Express to catch the explosion in the future.
-
 app.use(globalErrorHandler);
 
 export default app;
+
+/*
+For the last 10 years, the creators of Express knew that the "Promise Blindness" was the biggest flaw in their framework.
+"Promise Blindness" refers to the architectural limitation of Express 4
+Express 4 was written in 2014, 3 years before the async/await syntax existed in JavaScript. It was designed to wrap your code in a synchronous try/catch block.
+When you use an async function, the code does not finish immediately. You send a query to MongoDB and tell Node.js, "I'll wait here for the Promise to resolve." In Express 4, as soon as your code paused to await the database, Express assumed the synchronous part of the function was successful and stopped watching.
+
+If the database crashed 50 milliseconds later, the Promise rejected. But because Express had already stopped watching, it was "blind" to the explosion. It wouldn't catch the error, it wouldn't send a response to the user, and the browser would just sit there spinning indefinitely until the connection timed out.
+
+Synchronous Code (No Promises): Express can catch explosions automatically because they happen instantly.
+Asynchronous Code (Promises/Databases): Express is blind (express 4.0). You MUST use asyncHandler to force Express to catch the explosion in the future.
+
+When they finally released Express 5.0, their number one priority was fixing it.
+In Express 5, they re-wrote the internal C++ router to natively understand the Promises. Now, if an asynchronous Promise rejects in the background, Express 5 automatically catches it and presses the next(error) trigger for you.
+It is doing the exact same job as the asyncHandler, but it does it natively at the engine level. Adding your own asyncHandler on top of Express 5 is redundant and adds unnecessary V8 function calls.
+
+Express 4  or below does not use await when it calls your controller.
+
+Here is a simplified look at exactly what Express 4 is doing under the hood when a request hits your route:
+
+// Inside Express 4's routing engine (Pseudo-code)
+try {
+  
+  // 🚨 Notice there is NO 'await' keyword here!
+  yourController(req, res, next); 
+  
+} catch (err) {
+  next(err);
+}
+
+How Express 5 fixed this
+The entire reason Express 5 was created was essentially to add the await keyword to that internal engine. In Express 5, the internal router looks more like this:
+
+// Inside Express 5's routing engine
+try {
+  // Now it actually waits for your Promise to resolve or reject!
+  await yourController(req, res, next); 
+} catch (err) {
+  next(err); // Automatically catches thrown AppErrors!
+}
+*/

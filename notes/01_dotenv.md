@@ -22,7 +22,7 @@ When you run `import 'dotenv/config'`, it triggers an automatic script behind th
 2. **String Parsing:** It reads the entire file as one giant text string. It splits the string at every new line, and then splits each line at the `=` sign.
 3. **The Mutation:** It takes the left side of the `=` (the key) and the right side (the value) and literally executes a memory mutation: `process.env[key] = value`.
 
-### What it returns:
+### What it returns
 
 ```javascript
 // if successful:

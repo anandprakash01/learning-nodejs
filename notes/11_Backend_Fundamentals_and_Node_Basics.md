@@ -8,7 +8,7 @@
 - **The Physics:** This creates a strict environmental boundary. It tells the ecosystem: "This tool is only for my local machine."
 - **Production Boundary:** When in production, install `--omit=dev`. This command explicitly tells Node.js to ignore everything in the "devDependencies" list.
 
-### Publish module (common js file) in npm to use as npm-package:
+### Publish module (common js file) in npm to use as npm-package
 
 1. Inside `package.json`, the name should be unique.
 2. Change `main` to the module file name (which you want to publish).
@@ -23,17 +23,17 @@
 
 - **Client (Front End)**
 - **Server (Back End):** Logic of the application, Stores Data.
-  - **Java** => Hibernate, Struts, Spring, Spring Boot, JSP etc.
-  - **PHP** => Laravel, CI (Code Igniter), Slim, Symphony
-  - **Ruby** => RoR (Ruby on Rails)
-  - **Python** => Django etc.
-  - **GoLang** => ?
-  - **C#** => MVC, Entity etc.
-  - **JavaScript** => Express js, Ember js, Next js, etc.
+  - **Java** : Hibernate, Struts, Spring, Spring Boot, JSP etc.
+  - **PHP** : Laravel, CI (Code Igniter), Slim, Symphony
+  - **Ruby** : RoR (Ruby on Rails)
+  - **Python** : Django etc.
+  - **GoLang** : ?
+  - **C#** : MVC, Entity etc.
+  - **JavaScript** : Express js, Ember js, Next js, etc.
 
 ### Framework vs Library
 
-==> "React is a Library"
+#### "React is a Library"
 
 - **Library:** Small set of methods and Classes (Small Sized).
 - **Framework:** Huge set of methods and Classes (Large sized).
@@ -93,7 +93,7 @@ _Created Server -> Listening on a port. Sent a request => Server emits a request
 **API:** Application Programming Interface
 **Postman:** It is a tool used to test the output of the APIs.
 
-### Types of APIs:
+### Types of APIs
 
 - **SOAP (Simple Object Access Protocol)** => Envelops of Data (XML)
 - **REST (Representational State Transfer)** => Raw data (JSON)
@@ -117,7 +117,7 @@ _Created Server -> Listening on a port. Sent a request => Server emits a request
 - **Flow:** FrontEnd => BackEnd => Data Base => Backend => Frontend
 - **API Flow:** React -> Backend (Node) | Client => Server
 
-### Req and Response parts:
+### Req and Response parts
 
 - **Header:** Meta data (Basic information of API, server name, origin details etc).
 - **Body:** Actual requested/sent data.
@@ -209,26 +209,29 @@ We never Store PHYSICAL FILES inside a database like document, video, audio. Dat
 **Insertion:**
 
 - **SQL:** `insert into students (John Doe, 9876543210)`
-- **Mongo:** ```javascript
-  db.students.insertOne({
+- **Mongo:**
+
+```javascript
+db.students.insertOne({
   name: "Jack",
   mobileNo: "9876543211",
-  email: "jack@email.com",
+  email: "john@example.com",
   address: "123, ABC Street",
   bloodGroup: "O-",
-  rollNo: "13246"
-  });
-
-````
+  rollNo: "13246",
+});
+```
 
 **Commands:**
-* `insert()`: To insert new record
-* `find()`: To find records
-* `update()`: To update records
-* `delete()`: To delete records
+
+- `insert()`: To insert new record
+- `find()`: To find records
+- `update()`: To update records
+- `delete()`: To delete records
+
 ```javascript
-db.students.find({ name: "John Doe" })
-````
+db.students.find({name: "John Doe"});
+```
 
 **Operators:**
 

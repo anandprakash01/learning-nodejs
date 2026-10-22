@@ -5,12 +5,15 @@
 
 ### The Threat (Same-Origin Policy):
 
-Google Chrome has a strict, hard-coded security rule: A website can only request data from its own exact domain and port.
+It is a security mechanism built directly into modern web browsers that controls whether a frontend application running at one origin is allowed to access data from a backend server running at a different origin.
+`An "origin" is defined as the combination of the protocol, domain, and port.`
+By default, browsers strictly enforce the Same-Origin Policy.
+
 If your React app is running on `http://localhost:5173`, and it tries to `fetch()` data from `http://localhost:3000`, the browser will violently block the request and throw a red CORS Policy Error in the console.
 
 ### The Solution (The `cors` package):
 
-CORS is a backend mechanism to bypass this Chrome security rule. We tell Express to attach a special header to every response: `Access-Control-Allow-Origin`.
+CORS (Cross-Origin Resource Sharing) is a backend mechanism to bypass this Browsers security rule. We tell Express to attach a special header to every response: `Access-Control-Allow-Origin`.
 We use this header to explicitly tell Browser: "I am the server on port 3000. I officially give permission to port 5173 to read my data." Chrome reads the header, relaxes its security, and lets the data pass through.
 
 ---
@@ -67,6 +70,7 @@ const corsOptions = {
       callback(new Error("Not allowed by CORS")); // Reject the request
     }
   },
+  credentials: true,
 };
 
 app.use(cors(corsOptions));
@@ -134,10 +138,10 @@ app.use(mongoSanitize());
 ```
 
 **B. Data sanitization against XSS**
-Cleans any user input from malicious HTML code.
+Cleans any user input from malicious HTML code. Now it is not used.
 
 ```javascript
-app.use(xss());
+// app.use(xss());
 ```
 
 ### 5. YOUR ROUTERS & ERROR HANDLERS

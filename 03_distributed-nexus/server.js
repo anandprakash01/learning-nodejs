@@ -15,6 +15,15 @@ const numCPUs = os.cpus().length;
    🚨 BLOCK 1: THE PRIMARY TRAFFIC COP
 ====================================================== */
 
+//   worker (Object): This is the actual cluster.Worker instance that just died. It contains all the metadata about the deceased process. it also contains properties like worker.id (its internal cluster sequence number) and worker.state (which will be 'dead').
+
+// code (Number or Null): This is the numeric exit code returned by the operating system when the process closed.
+// 0 means it closed cleanly and intentionally.
+// 1 (or any other number) usually indicates an uncaught exception or fatal error caused the crash.
+// If the process was killed by a system signal instead of an error, this value will be null.
+
+// signal (String or Null): If the worker didn't crash from a code error but was forcefully killed by the operating system or another process (like a manual termination command), this string will tell you the exact kill signal used (e.g., 'SIGTERM' or 'SIGKILL'). If it crashed due to standard code errors, this will be null.
+
 if (cluster.isPrimary) {
   console.log(`[PRIMARY] Process (PID: ${process.pid}) is booting...`);
   console.log(`[PRIMARY] Detecting ${numCPUs} CPU cores. Forking workers...`);

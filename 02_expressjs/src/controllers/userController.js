@@ -7,6 +7,58 @@ import env from "../../config/env.js";
 
 import {asyncHandler} from "../utils/asyncHandler.js";
 
+// 🚨 THE COOKIE OPTIONS
+const cookieOptions = {
+  httpOnly: true, // Prevents XSS attacks
+
+  // secure: env.NODE_ENV === "production",// Only sends over HTTPS in production
+  secure: true,
+
+  // sameSite: "Strict", // Protects against Cross-Site Request Forgery (CSRF) attacks
+  // sameSite: "Lax", // Allows cookies to be sent in cross-site requests under certain conditions
+  sameSite: "None",
+
+  maxAge: 30 * 24 * 60 * 60 * 1000, // 30 day expiration in milliseconds
+  // expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 Days
+};
+
+// What it takes: It specifically requires a native JavaScript Date object.
+
+// maxAge: (Time in milliseconds)
+// What happens if you leave maxAge: If you don't provide expires (or maxAge), the cookie becomes a "Session Cookie", which deletes itself the moment the user closes the browser tab.
+
+// maxAge is actually a modern alternative to expires that accepts raw milliseconds directly, meaning you don't have to use new Date()!
+
+// httpOnly:true/false (always true)
+// This tells the browser to hide the cookie from JavaScript. If a hacker injects malicious code into your React frontend (Cross-Site Scripting), they cannot run document.cookie to steal the JWT. The browser will only attach it automatically to HTTP requests.
+
+// secure:true/false (true in Production (HTTPS), false in Development (HTTP))
+// if set to true, the browser will flat-out refuse to send the cookie over an unencrypted HTTP connection. If you hardcode this to `true` while testing on http://localhost:3000, your cookies will silently disappear and authentication will fail.
+
+// sameSite: "strict"/"lax"/"none"
+// This dictates whether the browser sends the cookie when the request comes from a completely different domain (Cross-Site Request Forgery).
+// strict': The frontend and backend live on the exact same root domain (e.g., app.yourdomain.com and api.yourdomain.com). This provides maximum security.
+
+// 'none': Your frontend is hosted on Vercel (app.vercel.app) and your backend is on Render/AWS (api.onrender.com).
+// The Golden Rule: If you set sameSite: 'none', modern browsers absolutely require you to also set secure: true, or they will reject the cookie immediately.
+
+// sameSite: "lax" is the sweet spot between security and user experience. It is also the automatic default in modern browsers (like Chrome) if you don't explicitly set a sameSite value.
+// It blocks the cookie during background cross-site requests (protecting you from CSRF attacks), but it allows the cookie to be sent during top-level navigations (when a user clicks a standard link to visit your website).
+
+// The Real-World Example
+// Imagine your user is logged into your app (yourdomain.com). They open their Gmail and see a link to a specific dashboard in your app.
+
+// If you used sameSite: 'strict': When they click the link in Gmail, the browser says, "This request is coming from mail.google.com," and blocks the cookie. The user arrives at your app logged out, forcing them to sign in again just because they clicked an external link.
+
+// If you use sameSite: 'lax': The browser recognizes that the user is intentionally navigating to your site (a top-level navigation). It allows the cookie through, and the user arrives at your dashboard seamlessly logged in.
+
+// However, if a malicious website tries to make a background API call to [yourdomain.com/api/delete-account](https://yourdomain.com/api/delete-account) using an invisible iframe or a fetch request, Lax will completely block the cookie because it is a background request, not a top-level navigation.
+
+// When to set sameSite: "lax"
+// Set it when your React frontend and Express backend share the same root domain (e.g., app.yourdomain.com and api.yourdomain.com). It gives you 99% of the security of strict while ensuring that users clicking links from emails, WhatsApp, or Google Search don't suddenly get logged out.
+
+// (Note: If your frontend and backend are on completely different domains like Vercel and Render, Lax will not work for your API calls. You must use none and secure: true in that scenario).
+
 const registerUser = asyncHandler(async (req, res) => {
   // 1. The Extraction Boundary (DTO) - The Data Transfer Object (DTO) Boundary
   // We explicitly pull ONLY the name and email from the memory stream. If the hacker sends "role": "admin" in req.body, it is completely ignored.
@@ -65,7 +117,7 @@ const registerUser = asyncHandler(async (req, res) => {
     success: true,
     message: "User created successfully.",
     data: {
-      token,
+      token, // do not send token here
       user: {
         _id: newUser._id,
         name: newUser.name,
@@ -92,6 +144,14 @@ const loginUser = async (req, res) => {
     "+password +failedLoginAttempts +accountLockedUntil",
   );
 
+  // => 3. The Authentication Failsafe
+  // If the user doesn't exist, OR if the password math fails...
+  // if (!user || !(await user.matchPassword(password))) {
+  //   // Note: We use 401 (Unauthorized). We purposely give a vague error.
+  //   // NEVER tell a hacker "User not found" or "Wrong password". It helps them guess.
+  //   // throw new Error("Invalid credentials");
+  //   throw new AppError("Invalid credentials", 401);
+  // }
   if (!user) {
     throw new AppError("Email is not registered", 401);
   }
@@ -105,15 +165,6 @@ const loginUser = async (req, res) => {
     );
   }
 
-  // => 3. The Authentication Failsafe
-  // If the user doesn't exist, OR if the password math fails...
-  // if (!user || !(await user.matchPassword(password))) {
-  //   // Note: We use 401 (Unauthorized). We purposely give a vague error.
-  //   // NEVER tell a hacker "User not found" or "Wrong password". It helps them guess.
-  //   // throw new Error("Invalid credentials");
-  //   throw new AppError("Invalid credentials", 401);
-  // }
-
   if (!(await user.matchPassword(password))) {
     // 🚨 THE PENALTY: Wrong password. Increment the strikes.
     user.failedLoginAttempts += 1;
@@ -125,7 +176,6 @@ const loginUser = async (req, res) => {
 
     // Save the penalty to the database without triggering validation rules
     await user.save({validateBeforeSave: false});
-    // Save the penalty to the database without triggering validation rules
     throw new AppError("Incorrect email or password", 401);
   }
 
@@ -140,24 +190,6 @@ const loginUser = async (req, res) => {
   const tokenPayload = {id: user._id};
   const token = jwt.sign(tokenPayload, env.JWT_SECRET_KEY, {expiresIn: env.JWT_EXPIRE});
 
-  // 🚨 THE COOKIE PAYLOAD
-  const cookieOptions = {
-    httpOnly: true, // Prevents XSS attacks (Prevents client-side JS from reading the cookie)
-    // secure: env.NODE_ENV === "production",// Only sends over HTTPS in production
-    secure: true,
-    // sameSite: "Strict", // Protects against Cross-Site Request Forgery (CSRF) attacks
-    // sameSite: "Lax", // Allows cookies to be sent in cross-site requests under certain conditions
-    sameSite: "None",
-    // maxAge: 30 * 24 * 60 * 60 * 1000, // 30 day expiration in milliseconds
-    expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 Days
-  };
-
-  // What it takes: It specifically requires a native JavaScript Date object.
-
-  // What happens if you leave it out: If you don't provide expires (or maxAge), the cookie becomes a Session Cookie. This means the browser will instantly delete the cookie the moment the user closes their browser window.
-
-  // maxAge is actually a modern alternative to expires that accepts raw milliseconds directly, meaning you don't have to use new Date()!
-
   res.cookie("jwt", token, cookieOptions);
 
   // sending token in headers
@@ -169,7 +201,7 @@ const loginUser = async (req, res) => {
     success: true,
     message: "User logged in successfully",
     data: {
-      token,
+      token, // do not send token in response data
       user: {
         _id: user._id,
         name: user.name,
@@ -181,11 +213,10 @@ const loginUser = async (req, res) => {
 };
 
 const getUserProfile = async (req, res) => {
-  // We already have req.user from the protect middleware, but that user
-  // was fetched without the ghost array. We need to fetch them again AND populate it.
+  // We already have req.user from the protect middleware, but that user was fetched without the ghost array. We need to fetch them again AND populate it.
 
   const user = await User.findById(req.user._id).select("-__v").populate({
-    path: "reviews", // The name of the ghost field!
+    path: "reviews", // the ghost field!
     select: "text rating -author", // We don't need the author ID, we already know who it is
   });
 

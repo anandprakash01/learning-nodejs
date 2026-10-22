@@ -1,12 +1,14 @@
 /* ===========================================================================
 THE ARCHITECT'S NOTES: config/env.js (The Fail-Fast Memory Boundary)
 ===========================================================================
-When Node.js boots, the OS injects environment variables as raw strings into the C++ memory space at `process.env`. 
+Environment variables in Node.js are key-value pairs used to configure applications dynamically, accessed via process.env
+
+When Node.js boots, the OS injects environment variables as raw strings into the C++ memory space at `process.env`.
 
 The "Mistake": 
 Amateurs scatter `process.env.PORT` or `process.env.JWT_SECRET` throughout hundreds of files. If a DevOps engineer forgets to set a variable in the production container, the server boots normally, but crashes days later when a specific line of code tries to access the missing secret. This is a tracing nightmare.
 
-The "Enterprise Way" (Fail-Fast Architecture): 
+The "Enterprise Way" (Fail-Fast Architecture):
 We read the `process.env` strings EXACTLY ONCE during the V8 boot sequence. 
 We pass them through a rigid mathematical schema (`zod`). 
 1. If a variable is missing, we intentionally CRASH the server before it binds to the TCP port.
