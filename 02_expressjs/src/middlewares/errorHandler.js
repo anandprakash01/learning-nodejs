@@ -19,7 +19,7 @@
 // If a developer forgets to use try/catch or next(err) in Express 4, the error vanishes into the void, and the user's browser spins forever.
 // Express 5 fixed this. The Express 5 engine wraps every single controller in a hidden V8 Promise. If your controller throws an error, Express 5's internal engine physically catches the explosion and automatically calls next(err) on your behalf. You cannot accidentally hang the server anymore.
 
-import env from "../../config/env.js";
+import env from "../config/env.js";
 
 const globalErrorHandler = (err, req, res, next) => {
   // let customError = {
