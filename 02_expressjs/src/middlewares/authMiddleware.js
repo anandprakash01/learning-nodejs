@@ -5,7 +5,7 @@ This middleware protects routes. It verifies the math of the JWT, fetches the us
 import jwt from "jsonwebtoken";
 import User from "../models/User.js";
 import AppError from "../utils/AppError.js";
-import env from "../../config/env.js";
+import env from "../config/env.js";
 
 const protect = async (req, res, next) => {
   const queryParams = req.query; // After the ? url
