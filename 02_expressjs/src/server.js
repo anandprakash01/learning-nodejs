@@ -15,10 +15,10 @@ we must break out of that single thread. We are going to command Node.js to clon
 import http from "http";
 // import {Server} from "socket.io"
 
-import "./src/utils/crashHandler.js"; // this must be at top
+import "./utils/crashHandler.js"; // this must be at top
 import env from "./config/env.js";
 import connectDB from "./config/db.js";
-import app from "./src/app.js";
+import app from "./app.js";
 
 const server = http.createServer(app);
 
@@ -45,7 +45,7 @@ const server = http.createServer(app);
 //   },
 // });
 
-// The HTTPS Wall: app.listen() ONLY creates an insecure http server. If you deploy your app and need an SSL Certificate (to make your site https://), app.listen() becomes completely useless. You are physically forced to write https.createServer({ key: sslKey, cert: sslCert }, app). By writing the explicit server creation now, your architecture is already prepped for SSL.
+// The HTTPS Wall: app.listen() ONLY creates an insecure http server. If you deploy your app and need an SSL (Secure Sockets Layer) Certificate (to make your site https://), app.listen() becomes completely useless. You are physically forced to write https.createServer({ key: sslKey, cert: sslCert }, app). By writing the explicit server creation now, your architecture is already prepped for SSL.
 
 // Automated Testing: if you use app.listen(), the server immediately binds to the port. If you want to use Supertest to run automated tests on your API, Supertest needs your app without the port being opened.
 
@@ -63,21 +63,21 @@ const server = http.createServer(app);
 server.on("error", error => {
   // If it's not a port-binding error
   if (error.syscall !== "listen") {
-    console.error("[SERVER ERROR] Non-listen error occurred:", error);
+    console.error("[FATAL] [SERVER] Non-listen error occurred:", error);
     process.exit(1);
   }
 
   switch (error.code) {
     case "EADDRINUSE":
-      console.error(`[SERVER ERROR] Port ${env.PORT} is already in use.`);
+      console.error(`[FATAL] [SERVER] Port ${env.PORT} is already in use.`);
       break;
     case "EACCES":
       console.error(
-        `[SERVER ERROR] Port ${env.PORT} requires elevated privileges (run as admin/root).`,
+        `[FATAL] [SERVER] Port ${env.PORT} requires elevated privileges (run as admin/root).`,
       );
       break;
     default:
-      console.error("[SERVER ERROR] Unknown startup error:", error);
+      console.error("[FATAL] [SERVER] Unknown startup error:", error);
   }
   process.exit(1);
 });
@@ -92,7 +92,9 @@ const startServer = async () => {
   await connectDB();
 
   server.listen(env.PORT, () => {
-    console.log(`[${env.NODE_ENV}] mode server started on port ${env.PORT}`);
+    console.log(
+      `[INFO ] [SERVER] ${env.NODE_ENV} mode server started on port ${env.PORT}`,
+    );
   });
 };
 
@@ -105,7 +107,7 @@ startServer();
 // --- Process Level Safety Nets ---
 
 process.on("unhandledRejection", err => {
-  console.error("🚨 UNHANDLED REJECTION! Shutting down...");
+  console.error("[FATAL] [PROCESS] UNHANDLED REJECTION! Shutting down...");
   console.error(err.name, err.message, err.stack);
 
   if (server.listening) {
@@ -175,9 +177,7 @@ process.on("SIGINT", () => gracefulShutdown("SIGINT"));
 // When this happens, the Node.js process enters what the official documentation calls an "unclean state."
 
 // The V8 engine's internal call stack just exploded.
-
 // Variables in your RAM might be half-written or corrupted, Memory might be leaking.
-
 // The Node.js Event Loop can no longer be trusted to execute code predictably. continuing to run the application is a massive security and stability risk.
 
 // Why no server.close()?
@@ -199,8 +199,34 @@ process.on("SIGINT", () => gracefulShutdown("SIGINT"));
 // When you deploy new code, scale down your servers, or restart a container, Docker/Kubernetes/PM2 does not just unplug the machine. They send a SIGTERM (terminate) signal. If your app ignores this, the host waits ~10 seconds and then forcefully executes a SIGKILL, which severs all active client downloads, aborts database writes, and causes data corruption.
 
 // 1. What is Round-Robin and How it Works
+// Round Robin is a load-balancing algorithm that distributes incoming network requests sequentially across a pool of servers or processes.
 // Round-Robin is the default load-balancing algorithm used by Node.js and almost every major cloud provider (like AWS and Nginx). It is the simplest, most equitable way to distribute traffic.
 
 // The Concept: Imagine a dealer handing out a deck of cards to 4 players. They deal one card to Player 1, the next to Player 2, then Player 3, then Player 4, and then they loop back to Player 1.
 
+// Because Node.js runs on a single thread, a single instance can only utilize one CPU core. If your server has an 8-core CPU, 7 cores sit idle. Node.js creates exact duplicate processes of your app running simultaneously in the background. Each clone gets its own memory and its own CPU core. Round Robin is the internal "traffic cop" sitting in the primary server. Its only job is to catch the incoming request and decide which clone gets to process it..
+
+// How it Works in Node.js
+// Node.js implements Round Robin natively through the built-in cluster module.
+// A Primary (Master) process is launched. It does not handle any application logic itself.
+// The Primary spawns Worker processes (usually one for each CPU core).
+// The Primary listens on your port (e.g., port 3000). When a request comes in, the Primary accepts it and hands it off to the next available Worker in a Round Robin sequence.
+
 // How it works in your API: When 100 API requests hit your server at the exact same time, the Operating System acts as the dealer. It blindly routes Request #1 to Worker 1, Request #2 to Worker 2, Request #3 to Worker 3, Request #4 to Worker 4, and Request #5 back to Worker 1.
+
+// In pure Round Robin, the algorithm is blind. It does not care if Worker 1 is still busy processing a heavy database query; if it is Worker 1's turn in the sequence, it gets the next request.
+
+// What happens to that new request depends entirely on why the worker is busy:
+
+// 1. The worker is busy with an I/O task (Database query, API call)
+// Node.js handles this flawlessly. Because I/O tasks are non-blocking, the worker parks the heavy database query in the background and immediately starts processing the new request. Both requests progress concurrently on the same worker without issue.
+
+// 2. The worker is busy with a CPU task (Complex math, massive JSON parse)
+// This is where the Round Robin system breaks down. CPU-heavy tasks block the Node.js event loop. The new request sits completely frozen in the queue. Even if your other workers are sitting 100% idle, the request cannot jump over to them. The user simply experiences a long loading screen or a timeout error.
+
+// How Developers Solve the CPU Trap
+// If your app has heavy CPU tasks, relying on basic Round Robin clustering is dangerous. Developers fix this using two approaches:
+
+// Smarter Load Balancing: Instead of Node's built-in Round Robin, they put a dedicated load balancer like Nginx in front of the app. Nginx can be configured to use the Least Connections algorithm, which actually checks how busy each worker is and routes traffic to the freest one.
+
+// Worker Threads: Instead of letting the CPU task block the web server clone, developers use Node's worker_threads module. This offloads the heavy math to a completely separate background thread, keeping the web worker instantly available to accept the next Round Robin request.

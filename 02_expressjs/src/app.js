@@ -10,7 +10,7 @@ import mongoSanitize from "express-mongo-sanitize";
 // import ExpressMongoSanitize from "express-mongo-sanitize";
 
 // Under the strict rules of Node ESM, you must type the exact physical file path, including the .js extension. If you forget the .js, the server will crash instantly.
-import env from "../config/env.js";
+import env from "./config/env.js";
 import {requestLogger} from "./middlewares/logger.js";
 import {globalErrorHandler} from "./middlewares/errorHandler.js";
 
@@ -18,6 +18,16 @@ import userRoutes from "./routes/userRoutes.js";
 import reviewRoutes from "./routes/ReviewRoutes.js";
 
 const app = express();
+
+// The "app" object is the beating heart of an Express.js application. Technically, it is a Node.js routing and middleware web framework instance. When you call const app = express(), you are creating a central registry that holds all your application's settings, routes, and middleware functions, and determines exactly how incoming HTTP requests should be handled.
+
+// app.use([path], middleware): This mounts a middleware function. A middleware is simply a function that intercepts an incoming request before it reaches your final route. If you don't specify a path (e.g., app.use(cors())), it runs on every single incoming request.
+
+// app.set(name, value): This assigns application-level configuration settings. You use it to define underlying server behaviors, such as app.set('trust proxy', 1) to tell Express it is sitting behind a cloud load balancer (like Render), or to configure a template engine.
+
+// app.get(), app.post(), app.put(), app.delete(): These are routing methods. They tell the app to listen for specific HTTP verbs on specific URL paths and execute a controller function when a match is found.
+
+// app.listen(port): This binds the app to a specific network port on your machine and starts actively listening for incoming TCP connections.
 
 // The Rule of Sequence: In Express, order is literally everything. The pipeline executes top-to-bottom.
 
@@ -35,15 +45,44 @@ app.set("trust proxy", 1);
 // With "trust proxy", 1: Express knows there is exactly 1 proxy in front of it. It reads the X-Forwarded-For header provided by Render and correctly assigns req.ip to the actual user's IP address.
 
 // Implement CORS.
+// CORS (Cross-Origin Resource Sharing) is a security mechanism enforced by the web browser, not the backend.
+// Browsers have a strict security rule called the "Same-Origin Policy". If a user is on `http://localhost:5173` (your React frontend) and the JavaScript tries to fetch data from `http://localhost:3000` (your Node API), the browser immediately blocks the response. It does this to prevent malicious websites from making silent API calls to your bank or email provider using saved session cookies.
+// CORS must be used whenever frontend and backend live on different domains, different subdomains, or different ports. The cors() middleware acts as a bouncer for your API. It automatically attaches specific HTTP headers to your backend responses that tell the browser, "It's safe, I explicitly allow localhost:5173 to read my data."
+
+// When you configure `app.use(cors({ ...options }))`, you are fine-tuning exactly who gets past the bouncer and what they are allowed to do.
+
+// ========== {origin: 'http://localhost:5173'} or {origin: true}
+// It Controls who can access the API.
+// limits access to just your local frontend. For production, you use your deployed frontend URL. If you set it to origin: '*' (or leave it blank), any website on the internet can hit your API.
+
+// When you set origin: true, the CORS middleware looks at the incoming request, reads the Origin header (the website making the API call), and dynamically echoes that exact same URL back in the Access-Control-Allow-Origin response header.
+// If `http://localhost:5173` calls the API, the server responds: "I allow `http://localhost:5173`"
+
+// You use `origin: true` when you want to allow any website to access your API, AND you also need to accept cookies or authorization headers (credentials: true).
+// Browsers have a strict security rule: if {credentials: true} is enabled, you are not allowed to use origin: '*'. You must specify an exact URL. origin: true acts as a shortcut to bypass this restriction by dynamically printing whatever URL just knocked on the door.
+
+// You aren't limited to just strings, arrays, or booleans for the origin. You can also pass a callback function. This is heavily used in SaaS platforms where users can add their own custom domains to their profile. The function allows you to query your MongoDB database in real-time to check if the incoming domain belongs to a paying customer before allowing the request.
+
+// ========== {methods: ['GET', 'POST', 'PUT', 'DELETE']}
+// It Dictates which HTTP verbs are allowed from the origin.
+// If a frontend tries to send a PATCH request and it isn't in this list, the browser will block it.
+
+// ========== {credentials: true} or {credentials: env.NODE_ENV === "production"}
+// This Determines if the frontend is allowed to send sensitive data like cookies, authorization headers (JWTs), or TLS client certificates.
+// If your frontend uses axios.defaults.withCredentials = true to send a login cookie, your backend CORS config must have this set to true, and your origin cannot be a wildcard (*).
+
+// ========== {optionsSuccessStatus: 200}
+// For complex requests (like sending JSON or using PUT/DELETE), the browser sends an invisible "Preflight" request using the OPTIONS method to ask the server for permission before sending the real request. By default, Express CORS responds to this with a 204 No Content status.
+// Some legacy browsers (like old Smart TVs or Internet Explorer 11) choke on a 204 status. Setting this to 200 ensures maximum compatibility across all older devices.
+
+// ========== {allowedHeaders: ['Content-Type', 'Authorization', 'x-custom-header']}
+// Controls which custom HTTP headers the frontend is allowed to send to your server.
+// If your frontend tries to send a custom header (like x-api-key or Authorization: Bearer <token>), the browser will block the request unless the server explicitly whitelists that header.
+
 // In development, you can leave it empty to allow all.
 // In production, you strictly lock it to your frontend domain!
 
-// app.use(cors()); //cross origin resource sharing
-const corsOptionObj = {
-  origin: process.env.FRONTEND_URL,
-  credentials: true,
-};
-// app.use(cors(corsOptionObj));
+// app.use(cors());
 
 const whitelist = [
   "https://site-a.com",
@@ -51,15 +90,19 @@ const whitelist = [
   "http://localhost:3000",
   "http://localhost:5173",
 ];
-app.use(
-  cors({
-    origin: whitelist,
-    credentials: true, // 🚨 REQUIRED if you are sending JWTs in Cookies!
-  }),
-);
+
+const corsOptions1 = {
+  origin: process.env.FRONTEND_URL,
+  credentials: true,
+};
+
+const corsOptions2 = {
+  origin: whitelist,
+  credentials: true, // 🚨 REQUIRED if you are sending JWTs in Cookies!
+};
 
 // The Dynamic Function Method (Best for scaling)
-const corsOptions = {
+const corsOptions3 = {
   origin: function (origin, callback) {
     // 1. Allow requests with no origin (like mobile apps, curl, or Postman)
     if (!origin) {
@@ -75,7 +118,9 @@ const corsOptions = {
   },
 };
 
-// app.use(cors(corsOptions));
+// app.use(cors(corsOptions1));
+app.use(cors(corsOptions2));
+// app.use(cors(corsOptions3));
 
 // The "magic" of Express middleware! You wrote the function, but you never actually write the code to call the function.
 // this function runs every single time an HTTP request hits your server, before the request is allowed to reach controllers.
