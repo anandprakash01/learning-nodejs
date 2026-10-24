@@ -3,7 +3,7 @@ import jwt from "jsonwebtoken";
 import User from "../models/User.js";
 import AppError from "../utils/AppError.js";
 import APIFeatures from "../utils/APIFeatures.js";
-import env from "../../config/env.js";
+import env from "../config/env.js";
 
 import {asyncHandler} from "../utils/asyncHandler.js";
 
