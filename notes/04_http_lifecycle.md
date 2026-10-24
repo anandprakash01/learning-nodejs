@@ -1,12 +1,61 @@
-# HTTP Status Codes: The Enterprise Cheat Sheet
+# The HTTP Lifecycle & Network Protocols
+
+## 🌐 The Client-Server Conversation
+
+Node.js allows you to build a server, but a server is useless if it cannot communicate with the outside world. The internet communicates using a standardized protocol called **HTTP (Hypertext Transfer Protocol)**.
+
+Every time a user visits a website, submits a form, or clicks a button, a strict two-way conversation occurs:
+
+1. The Client (Browser, Mobile App, Postman) sends an **HTTP Request**.
+2. The Server (Your Node.js app) processes it and sends back an **HTTP Response**.
+
+---
+
+## 1. Anatomy of an HTTP Request
+
+When a client wants something from your server, it packages a request. A raw HTTP request is just a block of text containing four distinct parts:
+
+### A. The Endpoint (URL/URI)
+
+The exact address the client is trying to reach (e.g., `https://api.myapp.com/users/123`).
+
+### B. The HTTP Verb (Method)
+
+The action the client wants to perform. REST API architecture maps these directly to Database CRUD (Create, Read, Update, Delete) operations:
+
+- **`GET`** (Read): Retrieve data. (Never contains a body/payload).
+- **`POST`** (Create): Submit new data to the server (e.g., creating a new user).
+- **`PUT`** (Update): Completely replace an existing resource.
+- **`PATCH`** (Update): Partially update an existing resource (e.g., changing just a password).
+- **`DELETE`** (Delete): Remove a resource.
+
+### C. The Headers
+
+Metadata about the request. This is the hidden context the browser sends automatically.
+
+- `Host`: The domain being requested.
+- `Content-Type`: Tells the server what format the body is in (e.g., `application/json` or `multipart/form-data`).
+- `Authorization`: Passes security credentials (like a JWT or API Key).
+
+### D. The Body (Payload)
+
+The actual data being sent. Usually formatted as a JSON string. (GET and DELETE requests typically do not have a body).
+
+---
+
+## 2. Anatomy of an HTTP Response
+
+Once your Node.js server finishes querying the database, it must send a response back. The response has three parts:
+
+### A. The Status Code
+
+A 3-digit mathematical summary of what happened. You must memorize these categories:
 
 In RESTful architecture, HTTP Status Codes are the universal language your backend uses to communicate with the frontend. Returning the correct code is critical for both security and frontend logic (e.g., Axios automatically throws an error for any code 400 or above).
 
 They are divided into distinct "buckets" based on who is responsible for the outcome.
 
----
-
-## The 2xx Series: Success (The Green Light)
+### The 2xx Series: Success (The Green Light)
 
 The server successfully received, understood, and accepted the request.
 
@@ -29,7 +78,12 @@ The server successfully received, understood, and accepted the request.
 
     This is not a bug in code, and it is not a bug in Express. This is the Global Law of the Internet (RFC 7231).
 
-## The 4xx Series: Client Errors (The Bouncer)
+### The 3xx Series: Redirection
+
+- **`301 Moved Permanently`**: The URL has changed.
+- **`302 Found`**: Temporary redirect.
+
+### The 4xx Series: Client Errors (The Bouncer)
 
 The client (React/Mobile App) made a mistake. They sent bad data, forgot their passport (JWT), or asked for something that doesn't exist.
 
@@ -47,9 +101,7 @@ The client (React/Mobile App) made a mistake. They sent bad data, forgot their p
 - **`429 Too Many Requests`**: The user has sent too many requests in a given amount of time.
   - **When to use:** This is automatically triggered by your **Express Rate Limiter** to stop brute-force attacks and DDoS attempts.
 
----
-
-## The 5xx Series: Server Errors (The Engine Blown)
+### The 5xx Series: Server Errors (The Engine Blown)
 
 The client sent a perfect request, but the backend Node.js server catastrophically failed to process it.
 
@@ -60,43 +112,52 @@ The client sent a perfect request, but the backend Node.js server catastrophical
 - **`503 Service Unavailable`**: The server is not ready to handle the request (usually down for maintenance or overloaded).
   - **When to use:** When you are intentionally taking the API offline for database migrations, or if the server CPU is maxed out.
 
+### B. The Headers
+
+Metadata sent back to the client.
+
+- `Content-Type`: Tells the browser how to parse the response (e.g., rendering HTML vs. parsing JSON).
+- `Set-Cookie`: Instructs the browser to save a cookie.
+
+### C. The Body
+
+The HTML page, the JSON data, or the raw image file requested.
+
 ---
 
-## Enterprise Express Example
+## 3. The Native Node `http` Module
 
-Here is how these status codes physically map to a standard Controller:
+Node.js has a built-in module to handle HTTP traffic.
 
 ```javascript
-export const updatePassword = async (req, res, next) => {
-  try {
-    const {currentPassword, newPassword} = req.body;
+import http from "http";
 
-    // 1. 400 Bad Request (Missing Data)
-    if (!currentPassword || !newPassword) {
-      return res.status(400).json({error: "Please provide both passwords"});
-    }
-
-    const user = await User.findById(req.user.id).select("+password");
-
-    // 2. 404 Not Found (Database miss)
-    if (!user) {
-      return res.status(404).json({error: "User no longer exists"});
-    }
-
-    // 3. 401 Unauthorized (Bad Credentials)
-    const isMatch = await user.comparePassword(currentPassword);
-    if (!isMatch) {
-      return res.status(401).json({error: "Incorrect current password"});
-    }
-
-    user.password = newPassword;
-    await user.save();
-
-    // 4. 200 OK (Success)
-    res.status(200).json({status: "success", message: "Password updated"});
-  } catch (error) {
-    // 5. 500 Internal Server Error (Something blew up)
-    res.status(500).json({error: "Something went wrong on our end"});
+// Creating a raw Node.js server
+const server = http.createServer((req, res) => {
+  // Manual Routing (The Switchboard)
+  if (req.url === "/" && req.method === "GET") {
+    res.writeHead(200, {"Content-Type": "application/json"});
+    res.end(JSON.stringify({message: "Welcome to the API"}));
+  } else if (req.url === "/users" && req.method === "POST") {
+    // Parsing the body manually in native Node is extremely tedious
+    // You have to listen to data streams and buffer chunks...
+    res.writeHead(201);
+    res.end("User created");
+  } else {
+    res.writeHead(404);
+    res.end("Route not found");
   }
-};
+});
+
+server.listen(3000, () => {
+  console.log("Server listening on port 3000");
+});
 ```
+
+### The Problem with Native HTTP
+
+As you can see, routing manually with `if/else` statements is messy. Furthermore, if a client sends a `POST` request with JSON, extracting that JSON from the raw incoming data stream in native Node requires writing complex Buffer concatenations.
+
+### The Solution: Express.js
+
+To avoid writing hundreds of lines of boilerplate code just to parse JSON and route URLs, the industry standardizes on web frameworks. In Module 2, we will introduce **Express.js**, which abstracts all of this raw HTTP networking into elegant, readable functions.

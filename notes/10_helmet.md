@@ -1,4 +1,8 @@
-# The Network Shields (Security & Rate Limiting)
+# The Network Shields
+
+## Shield 1: Helmet middleware
+
+Helmet is a popular middleware package for Node.js (specifically designed for Express apps) that helps secure your application by setting various HTTP response headers. By configuring these headers correctly, Helmet shields your backend API or web application from well-known vulnerabilities like `Cross-Site Scripting (XSS)`, `clickjacking`, `sniffing`, and open redirects
 
 If someone points a Python script at `/api/users/login` endpoint and send 100,000 bad passwords per second against the email `admin@yourstartup.com`, two catastrophic things will happen:
 
@@ -32,7 +36,7 @@ npm install express-rate-limit
 
 ---
 
-## Shield 1: Helmet (The Browser Armor)
+## Helmet (The Browser Armor)
 
 helmet is actually a collection of 14 smaller middleware functions. It automatically sets HTTP response headers to block Click-jacking, prevent browsers from guessing MIME types, and disable the `X-Powered-By: Express` header (so hackers don't know what backend language you are using).
 

@@ -1,4 +1,11 @@
-# Shield 2: Express Rate Limit (The Door Bouncer)
+# The Network Shields
+
+## Shield 2: Express Rate Limit
+
+If someone points a Python script at `/api/users/login` endpoint and send 100,000 bad passwords per second against the email `admin@yourstartup.com`, two catastrophic things will happen:
+
+- **Without a shield:** Your Node.js server takes all 100,000 requests, runs them through the heavy bcrypt math algorithm, maxes out your CPU to 100%, and crashes. Your database connections will max out, dropping all legitimate users.
+- **With a Rate Limiter:** The server counts the requests from the hacker's IP address. After 5 or 10 requests, it drops a titanium door. For the next hour, if that IP tries to connect, Express doesn't even run the controller. It instantly returns an HTTP 429 `Too Many Requests` error. It takes 0% CPU.
 
 We build the counting mechanism. We define a "window" of time, and a "max" number of requests allowed in that window.
 

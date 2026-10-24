@@ -150,3 +150,35 @@ If two Administrators open the exact same User document at the same millisecond:
   If both saves hit the database simultaneously, it could corrupt the data.
 
 To prevent this, every time a complex mutation happens, Mongoose silently increments the version (`__v: 1`, `__v: 2`). If your server tries to save a document, but the version number in RAM does not match the version number on the hard drive, Mongoose forcefully blocks the save and throws a `VersionError`. It is an invisible shield protecting your data from simultaneous overwrite collisions.
+
+## 6. Schemas and Models
+
+```javascript
+import mongoose from "mongoose";
+
+// 1. Define the Blueprint (Schema)
+const userSchema = new mongoose.Schema(
+  {
+    username: {
+      type: String,
+      required: [true, "A username is required"],
+      unique: true,
+      trim: true,
+    },
+    age: {
+      type: Number,
+      min: [18, "User must be an adult"],
+    },
+    role: {
+      type: String,
+      enum: ["user", "admin"],
+      default: "user",
+    },
+  },
+  {timestamps: true},
+); // Automatically adds createdAt and updatedAt
+
+// 2. Compile into a Model
+const User = mongoose.model("User", userSchema);
+export default User;
+```
